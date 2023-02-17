@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "chgcap"
+]
+
+[workspace.package]
+homepage = ""
+keywords = ["cdc"]
+license = "Apache-2.0"
+repository = ""
