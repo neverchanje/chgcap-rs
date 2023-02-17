@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "chgcap"
+    "chgcap",
+    "chgcap-mysql"
 ]
 
 [workspace.package]
