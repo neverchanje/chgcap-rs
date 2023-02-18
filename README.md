@@ -32,3 +32,14 @@ To use chgcap, you must first configure a connector for the source database. Onc
 ## Documentation
 
 The full documentation can be found on [GitHub](https://github.com/
+
+## Credits
+
+chgcap was inspired by and uses some code from the following open-source projects:
+
+- [Rust MySQL CDC](https://github.com/rusuly/mysql_cdc)
+- [Flink CDC Connectors](https://github.com/ververica/flink-cdc-connectors)
+
+## License
+
+chgcap is released under the [Apache 2.0 license](LICENSE).
