@@ -1,14 +1,28 @@
 use crate::mysql_source::MysqlSourceConfig;
 use anyhow::Result;
+use mysql_async::{BinlogRequest, BinlogStream, Pool};
 use std::collections::HashMap;
 
 pub struct MysqlConn {
     cfg: MysqlSourceConfig,
+    binlog_stream: BinlogStream,
+    conn_pool: Pool,
 }
 
 impl MysqlConn {
-    pub fn new(cfg: MysqlSourceConfig) -> Self {
-        Self { cfg }
+    pub async fn new(cfg: MysqlSourceConfig) -> Result<Self> {
+        let conn_pool = Pool::from_url("mysql://root:password@localhost:3307/db_name")?;
+        let conn = conn_pool.get_conn().await?;
+
+        let binlog_stream = conn
+            .get_binlog_stream(BinlogRequest::new(*cfg.server_id() as u32))
+            .await?;
+
+        Ok(Self {
+            cfg,
+            conn_pool,
+            binlog_stream,
+        })
     }
 
     /// Determine whether the MySQL server has the binlog_row_image set to 'FULL'.

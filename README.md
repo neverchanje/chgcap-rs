@@ -14,8 +14,7 @@ chgcap is an open-source library of connectors for Change-Data-Capture (CDC). It
 
 | Connector | Database | Driver |
 | --------- | -------- | ------ |
-| chgcap-mysql | MySQL | |
- 
+| chgcap-mysql | MySQL | [mysql_async](https://docs.rs/mysql_async/latest/mysql_async/) |
 
 ## Getting Started
 

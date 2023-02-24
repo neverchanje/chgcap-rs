@@ -1,5 +1,5 @@
 [package]
-name = "chgcap-mysql"
+name = "chgcap-debezium"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,6 +7,3 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1"
-derive_builder = "0.12"
-mysql_async = "0.31"
-getset = "0.1.2"
