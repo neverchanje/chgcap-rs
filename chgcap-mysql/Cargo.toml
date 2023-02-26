@@ -2,11 +2,11 @@
 name = "chgcap-mysql"
 version = "0.1.0"
 edition = "2021"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1"
 derive_builder = "0.12"
-mysql_async = "0.31"
+futures = "0.3.26"
 getset = "0.1.2"
+mysql_async = "0.31"

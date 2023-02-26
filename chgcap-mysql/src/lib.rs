@@ -8,6 +8,10 @@ mod state;
 mod schema;
 #[allow(dead_code)]
 mod metrics;
+#[allow(dead_code)]
+mod gtid;
+#[allow(dead_code)]
+mod config;
 
 #[macro_use]
 extern crate derive_builder;

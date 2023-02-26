@@ -2,6 +2,8 @@
 
 chgcap is an open-source library for Change-Data-Capture (CDC). It is written in Rust and designed to be a drop-in replacement for Debezium. The motivation for this project is the difficulty of integrating Debezium with other languages. CDC should not be limited to the Java ecosystem. Ultimately, I would like it to be wrapped as a C library and make other language bindings based on it.
 
+The initial focus of this project will be to support native CDC without relying on third parties such as Kafka Connect. This allows us to makes its usefulness more apparent. In addition, we will first focus on the Rust API and consider others if there are many issues requesting them.
+
 ## Features
 
 It aims to provide all main features supported by Debezium, including:
