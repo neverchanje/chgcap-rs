@@ -1,7 +1,9 @@
-use crate::source::MysqlSourceConfig;
+use std::collections::HashMap;
+
 use anyhow::Result;
 use mysql_async::{BinlogRequest, BinlogStream, Conn, Pool};
-use std::collections::HashMap;
+
+use crate::source::MysqlSourceConfig;
 
 pub fn new_conn_pool() -> Result<Pool> {
     let conn_pool = Pool::from_url("mysql://root:password@localhost:3307/db_name")?;
@@ -11,9 +13,14 @@ pub fn new_conn_pool() -> Result<Pool> {
 pub async fn get_binlog_stream(pool: &Pool, cfg: &MysqlSourceConfig) -> Result<BinlogStream> {
     let conn = pool.get_conn().await?;
     let binlog_stream = conn
-        .get_binlog_stream(BinlogRequest::new(cfg.server_id() as u32))
+        .get_binlog_stream(BinlogRequest::new(cfg.server_id()))
         .await?;
     Ok(binlog_stream)
+}
+
+pub struct BinlogPosition {
+    filename: String,
+    position: u64,
 }
 
 pub struct MysqlConn {
@@ -83,8 +90,8 @@ impl MysqlConn {
 
     /// Determine the executed GTID set for MySQL.
     ///
-    /// Returns the string representation of MySQL's GTID sets; never null but an empty string if the
-    /// server does not use GTIDs.
+    /// Returns the string representation of MySQL's GTID sets; never null but an empty string if
+    /// the server does not use GTIDs.
     pub fn known_gtid_set() -> Result<String> {
         todo!()
     }
