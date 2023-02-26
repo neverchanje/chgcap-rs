@@ -1,7 +1,13 @@
 #[allow(dead_code)]
-mod mysql_conn;
+mod connection;
 #[allow(dead_code)]
-mod mysql_source;
+mod source;
+#[allow(dead_code)]
+mod state;
+#[allow(dead_code)]
+mod schema;
+#[allow(dead_code)]
+mod metrics;
 
 #[macro_use]
 extern crate derive_builder;

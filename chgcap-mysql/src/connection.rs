@@ -1,4 +1,4 @@
-use crate::mysql_source::MysqlSourceConfig;
+use crate::source::MysqlSourceConfig;
 use anyhow::Result;
 use mysql_async::{BinlogRequest, BinlogStream, Pool};
 use std::collections::HashMap;

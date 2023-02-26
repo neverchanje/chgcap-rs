@@ -102,3 +102,10 @@ impl MysqlSource {
 }
 
 pub struct MysqlReaderSplit {}
+
+/// Startup modes for the MySQL CDC Consumer.
+pub enum StartupMode {
+    Earliest,
+    Latest,
+    SpecificOffset,
+}

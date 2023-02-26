@@ -224,13 +224,6 @@ name = "chgcap"
 version = "0.1.0"
 
 [[package]]
-name = "chgcap-debezium"
-version = "0.1.0"
-dependencies = [
- "anyhow",
-]
-
-[[package]]
 name = "chgcap-mysql"
 version = "0.1.0"
 dependencies = [
