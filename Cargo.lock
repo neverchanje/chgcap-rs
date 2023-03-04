@@ -231,6 +231,7 @@ dependencies = [
  "derive_builder",
  "futures",
  "getset",
+ "log",
  "mysql_async",
 ]
 

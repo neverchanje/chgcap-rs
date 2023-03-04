@@ -8,4 +8,4 @@ members = [
 homepage = ""
 keywords = ["cdc"]
 license = "Apache-2.0"
-repository = ""
+repository = "https://github.com/neverchanje/chgcap-rs"

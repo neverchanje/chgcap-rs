@@ -3,9 +3,10 @@ use std::collections::HashMap;
 use anyhow::Result;
 use mysql_async::{BinlogRequest, BinlogStream, Conn, Pool};
 
-use crate::source::MysqlSourceConfig;
+use crate::config::MysqlSourceConfig;
 
 pub fn new_conn_pool() -> Result<Pool> {
+    // TODO: support ssl: https://github.com/neverchanje/chgcap-rs/issues/1
     let conn_pool = Pool::from_url("mysql://root:password@localhost:3307/db_name")?;
     Ok(conn_pool)
 }
