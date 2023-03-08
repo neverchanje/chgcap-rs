@@ -7,6 +7,12 @@ pub enum SslMode {
     Disabled,
 }
 
+impl Default for SslMode {
+    fn default() -> Self {
+        Self::Disabled
+    }
+}
+
 /// The set of predefined modes for dealing with failures during event processing.
 #[derive(Debug)]
 pub enum FailureHandlingMode {
@@ -34,20 +40,26 @@ pub struct MysqlSourceConfig {
     /// The maximum time that the connector should wait after trying to connect to the MySQL
     /// database server before timing out.
     #[getset(get = "pub")]
+    #[builder(default)]
     connect_timeout: Duration,
 
     /// The connection pool size.
     #[getset(get_copy = "pub")]
+    #[builder(default)]
     connection_pool_size: i32,
 
-    /// An optional list of regular expressions that match database names to be monitored; any
-    /// database name not included in the whitelist will be excluded from monitoring. By default
-    /// all databases will be monitored.
-    #[getset(get = "pub")]
-    database_list: Vec<String>,
+    // /// An optional list of regular expressions that match database names to be monitored; any
+    // /// database name not included in the whitelist will be excluded from monitoring. By default
+    // /// all databases will be monitored.
+    // #[getset(get = "pub")]
+    // database_list: Vec<String>,
+    /// TODO: We currently only support
+    #[builder(default)]
+    database: String,
 
     /// The interval of heartbeat event.
     #[getset(get = "pub")]
+    #[builder(default)]
     heartbeat_interval: Duration,
 
     #[getset(get = "pub")]
@@ -55,6 +67,7 @@ pub struct MysqlSourceConfig {
 
     /// Whether the [`MySqlSource`] should output the schema changes or not.
     #[getset(get_copy = "pub")]
+    #[builder(default)]
     include_schema_changes: bool,
 
     /// Password to use when connecting to the MySQL database server.
@@ -67,6 +80,7 @@ pub struct MysqlSourceConfig {
 
     /// Whether the [`MySqlSource`] should output the schema changes or not.
     #[getset(get_copy = "pub")]
+    #[builder(default)]
     scan_newly_added_table_enabled: bool,
 
     /// A numeric ID of this database client, which must be unique across all currently-running
@@ -80,19 +94,23 @@ pub struct MysqlSourceConfig {
     /// TIMESTAMP type in MYSQL converted to STRING. See more
     /// https://debezium.io/documentation/reference/1.5/connectors/mysql.html#mysql-temporal-types
     #[getset(get = "pub")]
+    #[builder(default)]
     server_timezone: String,
 
     /// The group size of split meta, if the meta size exceeds the group size, the meta will be
     /// divided into multiple groups.
     #[getset(get_copy = "pub")]
+    #[builder(default)]
     split_meta_group_size: i32,
 
     /// The split size (number of rows) of table snapshot, captured tables are split into multiple
     /// splits when read the snapshot of table.
     #[getset(get_copy = "pub")]
+    #[builder(default)]
     split_size: i32,
 
     #[getset(get = "pub")]
+    #[builder(default)]
     ssl_mode: SslMode,
 
     /// An optional list of regular expressions that match fully-qualified table identifiers for
@@ -100,9 +118,33 @@ pub struct MysqlSourceConfig {
     /// monitoring. Each identifier is of the form databaseName.tableName. By default the
     /// connector will monitor every non-system table in each monitored database.
     #[getset(get = "pub")]
+    #[builder(default)]
     table_list: Vec<String>,
 
     /// Name of the MySQL database to use when connecting to the MySQL database server.
     #[getset(get = "pub")]
     username: String,
+}
+
+impl Default for MysqlSourceConfig {
+    fn default() -> Self {
+        Self {
+            connect_timeout: Duration::from_secs(5),
+            connection_pool_size: 10,
+            database: Default::default(),
+            heartbeat_interval: Duration::from_secs(3),
+            hostname: Default::default(),
+            include_schema_changes: Default::default(),
+            scan_newly_added_table_enabled: Default::default(),
+            server_id: Default::default(),
+            server_timezone: Default::default(),
+            split_meta_group_size: Default::default(),
+            split_size: Default::default(),
+            ssl_mode: SslMode::Disabled,
+            table_list: Default::default(),
+            username: Default::default(),
+            password: Default::default(),
+            port: Default::default(),
+        }
+    }
 }

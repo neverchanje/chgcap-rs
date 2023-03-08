@@ -8,13 +8,14 @@ edition = "2021"
 anyhow = "1"
 derive_builder = "0.12"
 futures = "0.3.26"
+futures-core = "0.3"
 getset = "0.1.2"
 log = "0.4"
 mysql_async = "0.31"
-futures-core = "0.3"
 pin-project = "1"
 
 [dev-dependencies]
-testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs.git", rev = "466f503" }
-lazy_static = "1"
 env_logger = "0.10"
+lazy_static = "1"
+testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs.git", rev = "466f503" }
+tokio = { version = "1", features = ["rt", "macros"] }

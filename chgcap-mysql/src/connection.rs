@@ -29,7 +29,7 @@ pub struct MysqlConn {
 }
 
 impl MysqlConn {
-    pub async fn new(conn: Conn) -> Self {
+    pub fn new(conn: Conn) -> Self {
         Self { conn }
     }
 

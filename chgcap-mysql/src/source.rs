@@ -1,7 +1,9 @@
+use anyhow::Result;
 use mysql_async::binlog::events::GtidEvent;
 
 use crate::config::MysqlSourceConfig;
 use crate::connection::MysqlConn;
+use crate::MysqlCdcStream;
 
 /// The MySQL CDC Source which supports parallel reading snapshot of table
 /// and then continue to capture data change from binlog.
@@ -15,7 +17,31 @@ pub struct MysqlSource {
     pub(crate) pool: mysql_async::Pool,
 }
 
-pub async fn get_mysql_cdc_stream(_cfg: &MysqlSourceConfig) {}
+impl MysqlSource {
+    pub async fn new(cfg: MysqlSourceConfig) -> Result<Self> {
+        // mysql://root:password@127.0.0.1:3307/mysql
+        let pool = mysql_async::Pool::new(
+            format!(
+                "mysql://{}:{}@{}:{}",
+                cfg.username(),
+                cfg.password(),
+                cfg.hostname(),
+                cfg.port(),
+            )
+            .as_str(),
+        );
+        let conn = pool.get_conn().await?;
+        Ok(Self {
+            cfg,
+            conn: MysqlConn::new(conn),
+            pool,
+        })
+    }
+
+    pub async fn cdc_stream(&self) -> Result<MysqlCdcStream> {
+        MysqlCdcStream::new(self).await
+    }
+}
 
 /// Startup modes for the MySQL CDC Consumer.
 pub enum StartupMode {

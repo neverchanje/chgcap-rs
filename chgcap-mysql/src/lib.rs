@@ -1,4 +1,6 @@
 #[allow(dead_code)]
+mod binlog_stream;
+#[allow(dead_code)]
 mod config;
 #[allow(dead_code)]
 mod connection;
@@ -14,8 +16,10 @@ mod schema;
 mod source;
 #[allow(dead_code)]
 mod state;
-#[allow(dead_code)]
-mod binlog_stream;
 
 #[macro_use]
 extern crate derive_builder;
+
+pub use binlog_stream::MysqlCdcStream;
+pub use config::{MysqlSourceConfig, MysqlSourceConfigBuilder};
+pub use source::MysqlSource;
