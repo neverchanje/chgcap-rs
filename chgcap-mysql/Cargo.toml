@@ -17,5 +17,7 @@ pin-project = "1"
 [dev-dependencies]
 env_logger = "0.10"
 lazy_static = "1"
+serde = "1"
+serde_yaml = "0.9"
 testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs.git", rev = "466f503" }
 tokio = { version = "1", features = ["rt", "macros"] }

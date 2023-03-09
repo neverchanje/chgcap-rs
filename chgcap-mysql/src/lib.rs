@@ -22,4 +22,5 @@ extern crate derive_builder;
 
 pub use binlog_stream::MysqlCdcStream;
 pub use config::{MysqlSourceConfig, MysqlSourceConfigBuilder};
+pub use record::{MysqlChange, MysqlTableEvent};
 pub use source::MysqlSource;

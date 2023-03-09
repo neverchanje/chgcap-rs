@@ -4,15 +4,14 @@ use std::task::Poll;
 use anyhow::{anyhow, Result};
 use log::{debug, error, info, warn};
 use mysql_async::binlog::events::{
-    DeleteRowsEvent, DeleteRowsEventV1, Event, EventData, GtidEvent, IncidentEvent, QueryEvent,
-    RotateEvent, RowsEventData, RowsQueryEvent, UpdateRowsEvent, UpdateRowsEventV1, WriteRowsEvent,
-    WriteRowsEventV1,
+    DeleteRowsEvent, Event, EventData, GtidEvent, IncidentEvent, QueryEvent, RotateEvent,
+    RowsEventData, RowsQueryEvent, UpdateRowsEvent, WriteRowsEvent,
 };
 use mysql_async::BinlogStream;
 use pin_project::pin_project;
 
 use crate::connection::get_binlog_stream;
-use crate::record::MysqlChange;
+use crate::record::MysqlTableEvent;
 use crate::source::{MysqlSource, SourceContext};
 
 #[pin_project]
@@ -45,7 +44,7 @@ impl MysqlEventHandler {
         }
     }
 
-    fn handle_event(&mut self, event: Event) -> Result<Option<MysqlChange>> {
+    fn handle_event(&mut self, event: Event) -> Result<Option<MysqlTableEvent>> {
         let event_data = match event.read_data()? {
             Some(data) => data,
             None => return Ok(None), // Skip empty event.
@@ -58,7 +57,9 @@ impl MysqlEventHandler {
             EventData::HeartbeatEvent => self.handle_server_heartbeat(),
             EventData::RowsQueryEvent(e) => self.handle_rows_query(e),
             EventData::GtidEvent(e) => self.handle_gtid_event(e),
-            EventData::RowsEvent(e) => self.handle_rows_event(e),
+            EventData::RowsEvent(e) => {
+             return  Ok(Some(  self.handle_rows_event(e)?));
+            }
             _ => {
                 // Unhandled events.
             }
@@ -171,33 +172,36 @@ impl MysqlEventHandler {
     }
 
     /// Generate source records for the supplied event.
-    fn handle_rows_event(&self, e: RowsEventData) {
+    fn handle_rows_event(&self, e: RowsEventData) -> Result<MysqlTableEvent> {
         match e {
-            RowsEventData::WriteRowsEventV1(e) => self.handle_write_rows_v1(e),
             RowsEventData::WriteRowsEvent(e) => self.handle_write_rows(e),
-            RowsEventData::UpdateRowsEventV1(e) => self.handle_update_rows_v1(e),
             RowsEventData::UpdateRowsEvent(e) => self.handle_update_rows(e),
-            RowsEventData::DeleteRowsEventV1(e) => self.handle_delete_rows_v1(e),
             RowsEventData::DeleteRowsEvent(e) => self.handle_delete_rows(e),
             RowsEventData::PartialUpdateRowsEvent(_) => todo!(),
+
+            RowsEventData::DeleteRowsEventV1(_)
+            | RowsEventData::WriteRowsEventV1(_)
+            | RowsEventData::UpdateRowsEventV1(_) => Err(anyhow!(
+                "Received an unsupported V1 event, which is for mariadb and mysql 5.1.15-5.6.x."
+            )), // TODO: may mark it as an unrecoverable error.
         }
     }
 
-    fn handle_write_rows_v1(&self, _e: WriteRowsEventV1) {}
+    fn handle_write_rows(&self, _e: WriteRowsEvent) -> Result<MysqlTableEvent> {
+        todo!()
+    }
 
-    fn handle_write_rows(&self, _e: WriteRowsEvent) {}
+    fn handle_update_rows(&self, _e: UpdateRowsEvent) -> Result<MysqlTableEvent> {
+        todo!()
+    }
 
-    fn handle_update_rows_v1(&self, _e: UpdateRowsEventV1) {}
-
-    fn handle_update_rows(&self, _e: UpdateRowsEvent) {}
-
-    fn handle_delete_rows_v1(&self, _e: DeleteRowsEventV1) {}
-
-    fn handle_delete_rows(&self, _e: DeleteRowsEvent) {}
+    fn handle_delete_rows(&self, _e: DeleteRowsEvent) -> Result<MysqlTableEvent> {
+        todo!()
+    }
 }
 
 impl futures_core::stream::Stream for MysqlCdcStream {
-    type Item = Result<MysqlChange>;
+    type Item = Result<MysqlTableEvent>;
 
     fn poll_next(
         self: Pin<&mut Self>,

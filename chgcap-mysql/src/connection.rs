@@ -5,12 +5,6 @@ use mysql_async::{BinlogRequest, BinlogStream, Conn, Pool};
 
 use crate::config::MysqlSourceConfig;
 
-pub fn new_conn_pool() -> Result<Pool> {
-    // TODO: support ssl: https://github.com/neverchanje/chgcap-rs/issues/1
-    let conn_pool = Pool::from_url("mysql://root:password@localhost:3307/db_name")?;
-    Ok(conn_pool)
-}
-
 pub async fn get_binlog_stream(pool: &Pool, cfg: &MysqlSourceConfig) -> Result<BinlogStream> {
     let conn = pool.get_conn().await?;
     let binlog_stream = conn
