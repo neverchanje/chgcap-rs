@@ -51,6 +51,7 @@ impl MysqlEventHandler {
         };
         self.ctx.server_id = event.header().server_id();
 
+        println!("event_data: {:?}", event_data);
         match event_data {
             EventData::QueryEvent(e) => self.handle_query(e),
             EventData::RotateEvent(e) => self.handle_rotate(e),

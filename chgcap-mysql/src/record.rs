@@ -5,7 +5,7 @@ pub enum MysqlChange {
 
 #[derive(Debug)]
 pub struct MysqlTableEvent {
-    table_name: String,
+    pub table_name: String,
 
-    changes: Vec<MysqlChange>,
+    pub changes: Vec<MysqlChange>,
 }
