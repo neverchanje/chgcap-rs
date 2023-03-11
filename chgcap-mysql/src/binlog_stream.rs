@@ -13,6 +13,7 @@ use pin_project::pin_project;
 use crate::connection::get_binlog_stream;
 use crate::record::MysqlTableEvent;
 use crate::source::{MysqlSource, SourceContext};
+use crate::MysqlChange;
 
 #[pin_project]
 pub struct MysqlCdcStream {
@@ -44,54 +45,58 @@ impl MysqlEventHandler {
         }
     }
 
-    fn handle_event(&mut self, event: Event) -> Result<Option<MysqlTableEvent>> {
+    /// Returns `Ok(None)` if the event is skipped.
+    fn handle_event(
+        &mut self,
+        stream: &BinlogStream,
+        event: Event,
+    ) -> Result<Option<MysqlTableEvent>> {
         let event_data = match event.read_data()? {
             Some(data) => data,
             None => return Ok(None), // Skip empty event.
         };
         self.ctx.server_id = event.header().server_id();
 
-        println!("event_data: {:?}", event_data);
         match event_data {
             EventData::QueryEvent(e) => self.handle_query(e),
             EventData::RotateEvent(e) => self.handle_rotate(e),
             EventData::HeartbeatEvent => self.handle_server_heartbeat(),
             EventData::RowsQueryEvent(e) => self.handle_rows_query(e),
             EventData::GtidEvent(e) => self.handle_gtid_event(e),
-            EventData::RowsEvent(e) => {
-             return  Ok(Some(  self.handle_rows_event(e)?));
+            EventData::RowsEvent(e) => return Ok(Some(self.handle_rows_event(stream, e)?)),
+            EventData::TableMapEvent(_) => {
+                // [`BinlogStream`] already handles this event. Internally, it maintains a table
+                // mapping from table ID to table name.
             }
             _ => {
-                // Unhandled events.
+                // EventData::UnknownEvent => todo!(),
+                // EventData::StartEventV3(_) => todo!(),
+                // EventData::StopEvent => todo!(),
+                // EventData::IntvarEvent(_) => todo!(),
+                // EventData::LoadEvent(_) => todo!(),
+                // EventData::SlaveEvent => todo!(),
+                // EventData::CreateFileEvent(_) => todo!(),
+                // EventData::AppendBlockEvent(_) => todo!(),
+                // EventData::ExecLoadEvent(_) => todo!(),
+                // EventData::DeleteFileEvent(_) => todo!(),
+                // EventData::NewLoadEvent(_) => todo!(),
+                // EventData::RandEvent(_) => todo!(),
+                // EventData::UserVarEvent(_) => todo!(),
+                // EventData::FormatDescriptionEvent(_) => todo!(),
+                // EventData::XidEvent(_) => todo!(),
+                // EventData::BeginLoadQueryEvent(_) => todo!(),
+                // EventData::ExecuteLoadQueryEvent(_) => todo!(),
+                // EventData::PreGaWriteRowsEvent(_) => todo!(),
+                // EventData::PreGaUpdateRowsEvent(_) => todo!(),
+                // EventData::PreGaDeleteRowsEvent(_) => todo!(),
+                // EventData::IncidentEvent(_) => todo!(),
+                // EventData::IgnorableEvent(_) => todo!(),
+                // EventData::AnonymousGtidEvent(_) => todo!(),
+                // EventData::PreviousGtidsEvent(_) => todo!(),
+                // EventData::TransactionContextEvent(_) => todo!(),
+                // EventData::ViewChangeEvent(_) => todo!(),
+                // EventData::XaPrepareLogEvent(_) => todo!(),
             }
-            // EventData::UnknownEvent => todo!(),
-            // EventData::StartEventV3(_) => todo!(),
-            // EventData::StopEvent => todo!(),
-            // EventData::IntvarEvent(_) => todo!(),
-            // EventData::LoadEvent(_) => todo!(),
-            // EventData::SlaveEvent => todo!(),
-            // EventData::CreateFileEvent(_) => todo!(),
-            // EventData::AppendBlockEvent(_) => todo!(),
-            // EventData::ExecLoadEvent(_) => todo!(),
-            // EventData::DeleteFileEvent(_) => todo!(),
-            // EventData::NewLoadEvent(_) => todo!(),
-            // EventData::RandEvent(_) => todo!(),
-            // EventData::UserVarEvent(_) => todo!(),
-            // EventData::FormatDescriptionEvent(_) => todo!(),
-            // EventData::XidEvent(_) => todo!(),
-            // EventData::BeginLoadQueryEvent(_) => todo!(),
-            // EventData::ExecuteLoadQueryEvent(_) => todo!(),
-            // EventData::TableMapEvent(_) => todo!(),
-            // EventData::PreGaWriteRowsEvent(_) => todo!(),
-            // EventData::PreGaUpdateRowsEvent(_) => todo!(),
-            // EventData::PreGaDeleteRowsEvent(_) => todo!(),
-            // EventData::IncidentEvent(_) => todo!(),
-            // EventData::IgnorableEvent(_) => todo!(),
-            // EventData::AnonymousGtidEvent(_) => todo!(),
-            // EventData::PreviousGtidsEvent(_) => todo!(),
-            // EventData::TransactionContextEvent(_) => todo!(),
-            // EventData::ViewChangeEvent(_) => todo!(),
-            // EventData::XaPrepareLogEvent(_) => todo!(),
         };
         Ok(None)
     }
@@ -173,9 +178,13 @@ impl MysqlEventHandler {
     }
 
     /// Generate source records for the supplied event.
-    fn handle_rows_event(&self, e: RowsEventData) -> Result<MysqlTableEvent> {
+    fn handle_rows_event(
+        &self,
+        stream: &BinlogStream,
+        e: RowsEventData,
+    ) -> Result<MysqlTableEvent> {
         match e {
-            RowsEventData::WriteRowsEvent(e) => self.handle_write_rows(e),
+            RowsEventData::WriteRowsEvent(e) => self.handle_write_rows(stream, e),
             RowsEventData::UpdateRowsEvent(e) => self.handle_update_rows(e),
             RowsEventData::DeleteRowsEvent(e) => self.handle_delete_rows(e),
             RowsEventData::PartialUpdateRowsEvent(_) => todo!(),
@@ -188,8 +197,34 @@ impl MysqlEventHandler {
         }
     }
 
-    fn handle_write_rows(&self, _e: WriteRowsEvent) -> Result<MysqlTableEvent> {
-        todo!()
+    fn handle_write_rows(
+        &self,
+        stream: &BinlogStream,
+        e: WriteRowsEvent,
+    ) -> Result<MysqlTableEvent> {
+        let tme = stream.get_tme(e.table_id()).ok_or_else(|| {
+            anyhow!(
+                "Received a write event for table id {} but no table metadata was found",
+                e.table_id()
+            )
+        })?;
+        let changes = e
+            .rows(tme)
+            .map(|r| {
+                let row = r?;
+                let before = row.0;
+                let after = row.1.unwrap();
+                debug_assert!(before.is_none());
+
+                Ok(MysqlChange::Insert(after))
+            })
+            .collect::<Result<Vec<MysqlChange>>>()?;
+        println!("INSERT {} {}", tme.table_name(), e.table_id());
+
+        Ok(MysqlTableEvent {
+            table_name: tme.table_name().into_owned(),
+            changes,
+        })
     }
 
     fn handle_update_rows(&self, _e: UpdateRowsEvent) -> Result<MysqlTableEvent> {
@@ -209,11 +244,12 @@ impl futures_core::stream::Stream for MysqlCdcStream {
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
+        // TODO: Add rate limiting here.
         loop {
             return match this.binlog_stream.as_mut().poll_next(cx) {
                 Poll::Ready(t) => match t {
                     Some(event_result) => match event_result {
-                        Ok(event) => match this.handler.handle_event(event) {
+                        Ok(event) => match this.handler.handle_event(&this.binlog_stream, event) {
                             Ok(change) => match change {
                                 Some(c) => Poll::Ready(Some(Ok(c))),
                                 None => continue, // Skip this event.

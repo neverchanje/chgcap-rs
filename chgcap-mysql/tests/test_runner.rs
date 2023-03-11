@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::vec;
 
 use anyhow::{anyhow, Result};
 use chgcap_mysql::{MysqlSource, MysqlSourceConfigBuilder, MysqlTableEvent};
@@ -14,9 +15,7 @@ struct TableData {
     rows: Vec<String>,
 }
 
-async fn consume_cdc_events(expected_num: usize) -> Vec<MysqlTableEvent> {
-    assert!(expected_num > 0);
-
+async fn consume_cdc_events() -> Result<Vec<MysqlTableEvent>> {
     let cfg = MysqlSourceConfigBuilder::default()
         .hostname("127.0.0.1".into())
         .port(3306)
@@ -28,12 +27,23 @@ async fn consume_cdc_events(expected_num: usize) -> Vec<MysqlTableEvent> {
         .unwrap();
 
     let source = MysqlSource::new(cfg).await.unwrap();
-    let cdc_stream = source.cdc_stream().await.unwrap();
-    cdc_stream
-        .map(|change| change.unwrap())
-        .take(expected_num)
-        .collect()
-        .await
+    let mut cdc_stream = source.cdc_stream().await.unwrap();
+
+    let mut events: Vec<MysqlTableEvent> = vec![];
+    let mut previous = MysqlTableEvent {
+        table_name: "".to_string(),
+        changes: vec![],
+    };
+    while let Some(r) = cdc_stream.next().await {
+        let e = r?;
+        println!("{e:?}");
+        if previous == e {
+            break;
+        }
+        events.push(e.clone());
+        previous = e;
+    }
+    Ok(events)
 }
 
 struct TestCase {
@@ -59,25 +69,23 @@ impl TestCase {
     }
 
     async fn run_inner(&mut self) -> Result<()> {
-        let mut total_events = 0;
         for (_name, t) in self.tables.iter() {
             t.create_table.clone().ignore(&mut self.conn).await?;
             for insert in t.inserts.iter() {
                 insert.ignore(&mut self.conn).await?;
             }
-            total_events += t.rows.len();
         }
 
-        let events = consume_cdc_events(total_events).await;
+        let events = consume_cdc_events().await?;
         let mut table_events: HashMap<String, Vec<String>> = HashMap::new();
         for e in events.iter() {
             let evs = table_events.entry(e.table_name.clone()).or_default();
             evs.extend(e.changes.iter().map(|ch| format!("{ch:?}")));
         }
         for (name, t) in self.tables.iter() {
-            let evs = table_events.get(name).ok_or_else(|| {
-                anyhow!("No event for table {name}. Received events: {table_events:?}")
-            })?;
+            let evs = table_events
+                .get(name)
+                .ok_or_else(|| anyhow!("No event for table {name}."))?;
             assert_eq!(evs.len(), t.rows.len());
             for (i, row) in t.rows.iter().enumerate() {
                 let ev = evs.get(i).unwrap();
@@ -111,6 +119,7 @@ async fn run_test(path: impl Into<String>) {
     TestCase::new(path).await.run().await;
 }
 
+// docker run --name mysql -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=123456 mysql/mysql-server:8.0
 #[tokio::test]
 async fn test_float() {
     run_test("./tests/testdata/float_test.yaml").await

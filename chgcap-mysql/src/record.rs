@@ -1,9 +1,11 @@
-#[derive(Debug)]
+use mysql_async::binlog::row::BinlogRow;
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum MysqlChange {
-    Insert(mysql_async::Row),
+    Insert(BinlogRow),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MysqlTableEvent {
     pub table_name: String,
 

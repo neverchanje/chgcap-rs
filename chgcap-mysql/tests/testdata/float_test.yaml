@@ -14,4 +14,4 @@ DBZ3865_2:
   inserts:
     - INSERT INTO DBZ3865_2(f1, f2, f3, f4_23, f4_24, f4_25, weight) VALUE (5.6, 5.61, 30.123456, 64.1, 64.1, 64.1, 64.1234);
   rows:
-    - inserts
+    - "Insert(BinlogRow { @0: Value(Int(1)), @1: Value(Float(5.6)), @2: Value(Float(5.61)), @3: Value(Float(30.12346)), @4: Value(Float(64.1)), @5: Value(Float(64.1)), @6: Value(Double(64.1)), @7: Value(Float(64.1234)) })"
