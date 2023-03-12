@@ -1,0 +1,86 @@
+DBZ3865_2:
+  prepare: |
+    CREATE TABLE `DBZ3865_2` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `f1` FLOAT DEFAULT 5.6,
+    `f2` FLOAT(10, 2) DEFAULT NULL,
+    `f3` FLOAT(35, 5) DEFAULT NULL,
+    `f4_23` FLOAT(23) DEFAULT NULL,
+    `f4_24` FLOAT(24) DEFAULT NULL,
+    `f4_25` FLOAT(25) DEFAULT NULL,
+    `weight` FLOAT UNSIGNED DEFAULT '0',
+    PRIMARY KEY (`ID`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+
+    INSERT INTO DBZ3865_2(f1, f2, f3, f4_23, f4_24, f4_25, weight) VALUE (5.6, 5.61, 30.123456, 64.1, 64.1, 64.1, 64.1234);
+  rows:
+    - 'Insert(INT(Int(1)),FLOAT(Float(5.6)),FLOAT(Float(5.61)),FLOAT(Float(30.12346)),FLOAT(Float(64.1)),FLOAT(Float(64.1)),DOUBLE(Double(64.1)),FLOAT(Float(64.1234)))'
+
+DBZ1773:
+  prepare: |
+    CREATE TABLE `DBZ1773` (
+      id int not null primary key auto_increment,
+      ti TINYINT SIGNED,
+      ti1 TINYINT(1) SIGNED,
+      ti2 TINYINT(2),
+      b BOOLEAN
+    ) ENGINE=InnoDB AUTO_INCREMENT=10851 DEFAULT CHARSET=utf8;
+
+    INSERT INTO DBZ1773 VALUES (1, 100, 5, 50, TRUE);
+  rows:
+    - 'Insert(INT(Int(1)),TINYINT(Int(100)),TINYINT(Int(5)),TINYINT(Int(50)),TINYINT(Int(1)))'
+
+DBZ2085:
+  prepare: |
+    CREATE TABLE `DBZ2085` (
+      id int not null primary key auto_increment,
+      b BOOLEAN NOT NULL DEFAULT 0
+    ) ENGINE=InnoDB AUTO_INCREMENT=10851 DEFAULT CHARSET=utf8;
+
+    INSERT INTO DBZ2085 VALUES (1, 1);
+  rows:
+    - 'Insert(INT(Int(1)),TINYINT(Int(1)))'
+
+DBZ5236:
+  prepare: |
+    CREATE TABLE `DBZ5236` (
+      id int(11) not null primary key auto_increment,
+      ti1 tinyint(3) unsigned NOT NULL DEFAULT '0',
+      ti2 tinyint(1) unsigned NOT NULL DEFAULT '0',
+      ti3 tinyint(1) NOT NULL DEFAULT '1'
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+    INSERT INTO DBZ5236 VALUES (1, 1, 1, 0);
+  rows:
+    - 'Insert(INT(Int(1)),TINYINT(Int(1)),TINYINT(Int(1)),TINYINT(Int(0)))'
+
+DBZ730:
+  prepare: |
+    CREATE TABLE `DBZ730` (
+      id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+      A NUMERIC(3, 2) NOT NULL DEFAULT 1.23,
+      B DECIMAL(4, 3) NOT NULL DEFAULT 2.321,
+      C NUMERIC(7, 5) NULL DEFAULT '12.678',
+      D NUMERIC(7, 5) NULL DEFAULT '15.28',
+      E DECIMAL(65, 18) NULL DEFAULT '0.000000000000000000'
+    ) ENGINE=InnoDB AUTO_INCREMENT=15851 DEFAULT CHARSET=utf8;
+    INSERT INTO `DBZ730`(A, B, C, D)
+    VALUES (1.33, -2.111 , 3.444, NULL);
+  rows:
+    - 'Insert(INT(Int(15851)),NEWDECIMAL(Bytes("1.33")),NEWDECIMAL(Bytes("-2.111")),NEWDECIMAL(Bytes("3.44400")),NEWDECIMAL(Null),NEWDECIMAL(Bytes("0.000000..")))'
+
+dbz_751_numeric_column_test:
+  prepare: |
+    CREATE TABLE dbz_751_numeric_column_test (
+          id INT AUTO_INCREMENT NOT NULL,
+          rating1 NUMERIC,
+          rating2 NUMERIC(8, 4),
+          rating3 NUMERIC(7),
+          rating4 NUMERIC(6, 0),
+          PRIMARY KEY (id)
+    ) DEFAULT CHARSET=utf8;
+
+    INSERT INTO dbz_751_numeric_column_test VALUES (default, 123, 123.4567, 234.5, 345.6);
+  rows:
+    # The numeric precision are lost.
+    - 'Insert(INT(Int(1)),NEWDECIMAL(Bytes("123")),NEWDECIMAL(Bytes("123.4567")),NEWDECIMAL(Bytes("235")),NEWDECIMAL(Bytes("346")))'

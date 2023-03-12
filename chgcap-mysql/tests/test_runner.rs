@@ -8,6 +8,8 @@ use mysql_async::{Conn, Pool};
 use serde::Deserialize;
 use tokio_stream::StreamExt;
 
+mod util;
+
 #[derive(Deserialize, PartialEq, Debug)]
 struct TableData {
     prepare: String,
@@ -76,8 +78,8 @@ impl TestCase {
 
         let mut table_events: HashMap<u64, Vec<String>> = HashMap::new();
         for e in events.iter() {
-            let evs = table_events.entry(e.table_id.clone()).or_default();
-            evs.extend(e.changes.iter().map(|ch| format!("{ch:?}")));
+            let evs = table_events.entry(e.table_id).or_default();
+            evs.extend(e.changes.iter().map(|ch| format!("{ch}")));
         }
         for (name, t) in self.tables.iter() {
             let table_id = tables_id
@@ -89,7 +91,7 @@ impl TestCase {
             assert_eq!(evs.len(), t.rows.len());
             for (i, row) in t.rows.iter().enumerate() {
                 let ev = evs.get(i).unwrap();
-                assert_eq!(ev, row);
+                ensure_eq!(ev, row);
             }
         }
 
@@ -121,11 +123,6 @@ async fn run_test(path: impl Into<String>) {
 
 // docker run --name mysql -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=123456 mysql/mysql-server:8.0
 #[tokio::test]
-async fn test_float() {
-    run_test("./tests/testdata/float_test.yaml").await
-}
-
-#[tokio::test]
-async fn test_tinyint() {
-    run_test("./tests/testdata/tinyint_test.yaml").await
+async fn test_cdc() {
+    run_test("./tests/testdata/testdata.yaml").await
 }
