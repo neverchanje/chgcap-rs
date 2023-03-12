@@ -1,11 +1,11 @@
 use std::pin::Pin;
 use std::task::Poll;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use log::{debug, error, info, warn};
 use mysql_async::binlog::events::{
     DeleteRowsEvent, Event, EventData, GtidEvent, IncidentEvent, QueryEvent, RotateEvent,
-    RowsEventData, RowsQueryEvent, UpdateRowsEvent, WriteRowsEvent,
+    RowsEventData, RowsQueryEvent, TableMapEvent, UpdateRowsEvent, WriteRowsEvent,
 };
 use mysql_async::BinlogStream;
 use pin_project::pin_project;
@@ -183,9 +183,15 @@ impl MysqlEventHandler {
         stream: &BinlogStream,
         e: RowsEventData,
     ) -> Result<MysqlTableEvent> {
-        match e {
-            RowsEventData::WriteRowsEvent(e) => self.handle_write_rows(stream, e),
-            RowsEventData::UpdateRowsEvent(e) => self.handle_update_rows(e),
+        let tme = stream.get_tme(e.table_id()).ok_or_else(|| {
+            anyhow!(
+                "Received a rows event for table id {} but no table metadata was found",
+                e.table_id()
+            )
+        })?;
+        let changes = match e {
+            RowsEventData::WriteRowsEvent(e) => self.handle_write_rows(tme, e),
+            RowsEventData::UpdateRowsEvent(e) => self.handle_update_rows(tme, e),
             RowsEventData::DeleteRowsEvent(e) => self.handle_delete_rows(e),
             RowsEventData::PartialUpdateRowsEvent(_) => todo!(),
 
@@ -194,45 +200,55 @@ impl MysqlEventHandler {
             | RowsEventData::UpdateRowsEventV1(_) => Err(anyhow!(
                 "Received an unsupported V1 event, which is for mariadb and mysql 5.1.15-5.6.x."
             )), // TODO: may mark it as an unrecoverable error.
-        }
-    }
-
-    fn handle_write_rows(
-        &self,
-        stream: &BinlogStream,
-        e: WriteRowsEvent,
-    ) -> Result<MysqlTableEvent> {
-        let tme = stream.get_tme(e.table_id()).ok_or_else(|| {
-            anyhow!(
-                "Received a write event for table id {} but no table metadata was found",
-                e.table_id()
-            )
-        })?;
-        let changes = e
-            .rows(tme)
-            .map(|r| {
-                let row = r?;
-                let before = row.0;
-                let after = row.1.unwrap();
-                debug_assert!(before.is_none());
-
-                Ok(MysqlChange::Insert(after))
-            })
-            .collect::<Result<Vec<MysqlChange>>>()?;
-        println!("INSERT {} {}", tme.table_name(), e.table_id());
-
+        }?;
         Ok(MysqlTableEvent {
-            table_name: tme.table_name().into_owned(),
-            table_id: e.table_id(),
+            table_name: tme.table_name().to_string(),
+            table_id: tme.table_id(),
             changes,
         })
     }
 
-    fn handle_update_rows(&self, _e: UpdateRowsEvent) -> Result<MysqlTableEvent> {
-        todo!()
+    fn handle_write_rows(
+        &self,
+        tme: &TableMapEvent,
+        e: WriteRowsEvent,
+    ) -> Result<Vec<MysqlChange>> {
+        e.rows(tme)
+            .map(|r| {
+                let row = r?;
+                if row.0.is_some() {
+                    bail!("unexpected 'before' in the UpdateRowsEvent")
+                }
+                let after = row
+                    .1
+                    .ok_or_else(|| anyhow!("'after' is missing in the UpdateRowsEvent"))?;
+
+                Ok(MysqlChange::Insert(after))
+            })
+            .collect::<Result<Vec<MysqlChange>>>()
     }
 
-    fn handle_delete_rows(&self, _e: DeleteRowsEvent) -> Result<MysqlTableEvent> {
+    fn handle_update_rows(
+        &self,
+        tme: &TableMapEvent,
+        e: UpdateRowsEvent,
+    ) -> Result<Vec<MysqlChange>> {
+        let mut changes: Vec<MysqlChange> = vec![];
+        for r in e.rows(tme) {
+            let row = r?;
+            let before = row
+                .0
+                .ok_or_else(|| anyhow!("'before' is missing in the UpdateRowsEvent"))?;
+            let after = row
+                .1
+                .ok_or_else(|| anyhow!("'after' is missing in the UpdateRowsEvent"))?;
+            changes.push(MysqlChange::Delete(before));
+            changes.push(MysqlChange::Insert(after));
+        }
+        Ok(changes)
+    }
+
+    fn handle_delete_rows(&self, _e: DeleteRowsEvent) -> Result<Vec<MysqlChange>> {
         todo!()
     }
 }

@@ -6,6 +6,7 @@ use mysql_async::consts::ColumnType;
 #[derive(Clone, PartialEq)]
 pub enum MysqlChange {
     Insert(BinlogRow),
+    Delete(BinlogRow),
 }
 
 fn fmt_column_type(c: &ColumnType) -> String {
@@ -70,6 +71,7 @@ impl std::fmt::Display for MysqlChange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Insert(row) => write!(f, "Insert({})", fmt_row(row)),
+            Self::Delete(row) => write!(f, "Delete({})", fmt_row(row)),
         }
     }
 }
