@@ -1,17 +1,16 @@
 use std::collections::HashMap;
-use std::vec;
+use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use chgcap_mysql::{MysqlSource, MysqlSourceConfigBuilder, MysqlTableEvent};
-use futures::StreamExt;
 use mysql_async::prelude::Query;
 use mysql_async::{Conn, Pool};
 use serde::Deserialize;
+use tokio_stream::StreamExt;
 
 #[derive(Deserialize, PartialEq, Debug)]
 struct TableData {
-    create_table: String,
-    inserts: Vec<String>,
+    prepare: String,
     rows: Vec<String>,
 }
 
@@ -27,21 +26,16 @@ async fn consume_cdc_events() -> Result<Vec<MysqlTableEvent>> {
         .unwrap();
 
     let source = MysqlSource::new(cfg).await.unwrap();
-    let mut cdc_stream = source.cdc_stream().await.unwrap();
+    let cdc_stream = source
+        .cdc_stream()
+        .await
+        .unwrap()
+        .timeout(Duration::from_secs(1));
+    tokio::pin!(cdc_stream);
 
     let mut events: Vec<MysqlTableEvent> = vec![];
-    let mut previous = MysqlTableEvent {
-        table_name: "".to_string(),
-        changes: vec![],
-    };
-    while let Some(r) = cdc_stream.next().await {
-        let e = r?;
-        println!("{e:?}");
-        if previous == e {
-            break;
-        }
-        events.push(e.clone());
-        previous = e;
+    while let Ok(Some(c)) = cdc_stream.try_next().await {
+        events.push(c?);
     }
     Ok(events)
 }
@@ -57,9 +51,8 @@ impl TestCase {
         let pool = mysql_async::Pool::new("mysql://root:123456@127.0.0.1:3306/mysql");
         let conn = pool.get_conn().await.unwrap();
 
-        let path = path.into();
         let tables: HashMap<String, TableData> =
-            serde_yaml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+            serde_yaml::from_str(&std::fs::read_to_string(path.into()).unwrap()).unwrap();
 
         Self {
             _pool: pool,
@@ -70,21 +63,28 @@ impl TestCase {
 
     async fn run_inner(&mut self) -> Result<()> {
         for (_name, t) in self.tables.iter() {
-            t.create_table.clone().ignore(&mut self.conn).await?;
-            for insert in t.inserts.iter() {
-                insert.ignore(&mut self.conn).await?;
-            }
+            t.prepare.clone().ignore(&mut self.conn).await?;
         }
 
         let events = consume_cdc_events().await?;
-        let mut table_events: HashMap<String, Vec<String>> = HashMap::new();
+
+        // Tables may be created multiple times. We use the latest.
+        let tables_id: HashMap<String, u64> = events
+            .iter()
+            .map(|e| (e.table_name.clone(), e.table_id))
+            .collect();
+
+        let mut table_events: HashMap<u64, Vec<String>> = HashMap::new();
         for e in events.iter() {
-            let evs = table_events.entry(e.table_name.clone()).or_default();
+            let evs = table_events.entry(e.table_id.clone()).or_default();
             evs.extend(e.changes.iter().map(|ch| format!("{ch:?}")));
         }
         for (name, t) in self.tables.iter() {
-            let evs = table_events
+            let table_id = tables_id
                 .get(name)
+                .ok_or_else(|| anyhow!("No table id for table {name}."))?;
+            let evs = table_events
+                .get(table_id)
                 .ok_or_else(|| anyhow!("No event for table {name}."))?;
             assert_eq!(evs.len(), t.rows.len());
             for (i, row) in t.rows.iter().enumerate() {
@@ -123,4 +123,9 @@ async fn run_test(path: impl Into<String>) {
 #[tokio::test]
 async fn test_float() {
     run_test("./tests/testdata/float_test.yaml").await
+}
+
+#[tokio::test]
+async fn test_tinyint() {
+    run_test("./tests/testdata/tinyint_test.yaml").await
 }

@@ -8,6 +8,6 @@ pub enum MysqlChange {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MysqlTableEvent {
     pub table_name: String,
-
+    pub table_id: u64,
     pub changes: Vec<MysqlChange>,
 }

@@ -1,0 +1,37 @@
+DBZ1773:
+  prepare: |
+    CREATE TABLE `DBZ1773` (
+      id int not null primary key auto_increment,
+      ti TINYINT SIGNED,
+      ti1 TINYINT(1) SIGNED,
+      ti2 TINYINT(2),
+      b BOOLEAN
+    ) ENGINE=InnoDB AUTO_INCREMENT=10851 DEFAULT CHARSET=utf8;
+
+    INSERT INTO DBZ1773 VALUES (1, 100, 5, 50, TRUE);
+  rows:
+    - "Insert(BinlogRow { @0: Value(Int(1)), @1: Value(Int(100)), @2: Value(Int(5)), @3: Value(Int(50)), @4: Value(Int(1)) })"
+
+DBZ2085:
+  prepare: |
+    CREATE TABLE `DBZ2085` (
+      id int not null primary key auto_increment,
+      b BOOLEAN NOT NULL DEFAULT 0
+    ) ENGINE=InnoDB AUTO_INCREMENT=10851 DEFAULT CHARSET=utf8;
+
+    INSERT INTO DBZ2085 VALUES (1, 1);
+  rows:
+    - "Insert(BinlogRow { @0: Value(Int(1)), @1: Value(Int(1)) })"
+
+DBZ5236:
+  prepare: |
+    CREATE TABLE `DBZ5236` (
+      id int(11) not null primary key auto_increment,
+      ti1 tinyint(3) unsigned NOT NULL DEFAULT '0',
+      ti2 tinyint(1) unsigned NOT NULL DEFAULT '0',
+      ti3 tinyint(1) NOT NULL DEFAULT '1'
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+    INSERT INTO DBZ5236 VALUES (1, 1, 1, 0);
+  rows:
+    - "Insert(BinlogRow { @0: Value(Int(1)), @1: Value(Int(1)), @2: Value(Int(1)), @3: Value(Int(0)) })"

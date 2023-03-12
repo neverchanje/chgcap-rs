@@ -223,6 +223,7 @@ impl MysqlEventHandler {
 
         Ok(MysqlTableEvent {
             table_name: tme.table_name().into_owned(),
+            table_id: e.table_id(),
             changes,
         })
     }
