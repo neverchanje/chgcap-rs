@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use chgcap_mysql::{MysqlSource, MysqlSourceConfigBuilder, MysqlTableEvent};
 use mysql_async::prelude::Query;
 use mysql_async::{Conn, Pool};
 use serde::Deserialize;
+use tokio::time::sleep;
 use tokio_stream::StreamExt;
 
 mod util;
@@ -67,6 +68,7 @@ impl TestCase {
         for (_name, t) in self.tables.iter() {
             t.prepare.clone().ignore(&mut self.conn).await?;
         }
+        sleep(Duration::from_secs(1)).await;
 
         let events = consume_cdc_events().await?;
 
@@ -88,7 +90,9 @@ impl TestCase {
             let evs = table_events
                 .get(table_id)
                 .ok_or_else(|| anyhow!("No event for table {name}."))?;
-            assert_eq!(evs.len(), t.rows.len());
+            if evs.len() != t.rows.len() {
+                bail!("Events count received ({}) for table '{name}'(id: {table_id}) mismatches with the expected ({}). Received:\n{evs:?}", evs.len(), t.rows.len());
+            }
             for (i, row) in t.rows.iter().enumerate() {
                 let ev = evs.get(i).unwrap();
                 ensure_eq!(ev, row);
@@ -109,7 +113,7 @@ impl TestCase {
     async fn teardown(&mut self) {
         // Clean up, no matter success or failure.
         for (table_name, _) in self.tables.iter() {
-            format!("DROP TABLE {table_name}")
+            format!("DROP TABLE IF EXISTS {table_name}")
                 .ignore(&mut self.conn)
                 .await
                 .unwrap();

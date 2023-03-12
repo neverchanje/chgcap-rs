@@ -12,14 +12,14 @@ fn fmt_column_type(c: &ColumnType) -> String {
     let s = match c {
         ColumnType::MYSQL_TYPE_DECIMAL => "DECIMAL",
         ColumnType::MYSQL_TYPE_TINY => "TINYINT",
-        ColumnType::MYSQL_TYPE_SHORT => "SHORT", // INT16
+        ColumnType::MYSQL_TYPE_SHORT => "SMALLINT",
         ColumnType::MYSQL_TYPE_LONG => "INT",
         ColumnType::MYSQL_TYPE_FLOAT => "FLOAT",
         ColumnType::MYSQL_TYPE_DOUBLE => "DOUBLE",
         ColumnType::MYSQL_TYPE_NULL => "NULL",
         ColumnType::MYSQL_TYPE_TIMESTAMP => "TIMESTAMP",
-        ColumnType::MYSQL_TYPE_LONGLONG => "LONG LONG",
-        ColumnType::MYSQL_TYPE_INT24 => "INT24",
+        ColumnType::MYSQL_TYPE_LONGLONG => "BIGINT",
+        ColumnType::MYSQL_TYPE_INT24 => "MEDIUMINT",
         ColumnType::MYSQL_TYPE_DATE => "DATE",
         ColumnType::MYSQL_TYPE_TIME => "TIME",
         ColumnType::MYSQL_TYPE_DATETIME => "DATETIME",

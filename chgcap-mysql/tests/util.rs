@@ -1,4 +1,4 @@
-/// Util macro to generate error when the two arguments are not equal.
+/// A helper macro to generate error when the two arguments are not equal.
 #[macro_export]
 macro_rules! ensure_eq {
     ($left:expr, $right:expr) => {
