@@ -381,3 +381,126 @@ GENERATED_TABLE:
     INSERT INTO GENERATED_TABLE VALUES (15, DEFAULT, DEFAULT);
   rows:
     - Insert(SMALLINT(Int(15)),SMALLINT(Int(30)),SMALLINT(Int(45)))
+
+# From Debezium MySqlUnsignedIntegerIT
+dbz_228_tinyint_unsigned:
+  prepare: |
+    CREATE TABLE dbz_228_tinyint_unsigned (
+      id int auto_increment NOT NULL,
+      c1 TINYINT(3) UNSIGNED ZEROFILL NOT NULL,
+      c2 TINYINT(3) UNSIGNED NOT NULL,
+      c3 TINYINT(3) NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_228_tinyint_unsigned VALUES (default, 255, 255, 127);
+    INSERT INTO dbz_228_tinyint_unsigned VALUES (default, 155, 155, -100);
+    INSERT INTO dbz_228_tinyint_unsigned VALUES (default, 0, 0, -128);
+  rows:
+    - Insert(INT(Int(1)),TINYINT(Int(255)),TINYINT(Int(255)),TINYINT(Int(127)))
+    - Insert(INT(Int(2)),TINYINT(Int(155)),TINYINT(Int(155)),TINYINT(Int(-100)))
+    - Insert(INT(Int(3)),TINYINT(Int(0)),TINYINT(Int(0)),TINYINT(Int(-128)))
+
+# From Debezium MySqlUnsignedIntegerIT
+dbz_228_smallint_unsigned:
+  prepare: |
+    CREATE TABLE dbz_228_smallint_unsigned (
+      id int auto_increment NOT NULL,
+      c1 SMALLINT UNSIGNED ZEROFILL NOT NULL,
+      c2 SMALLINT UNSIGNED NOT NULL,
+      c3 SMALLINT NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_228_smallint_unsigned VALUES (default, 65535, 65535, 32767);
+    INSERT INTO dbz_228_smallint_unsigned VALUES (default, 45535, 45535, -12767);
+    INSERT INTO dbz_228_smallint_unsigned VALUES (default, 0, 0, -32768);
+  rows:
+    - Insert(INT(Int(1)),SMALLINT(Int(65535)),SMALLINT(Int(65535)),SMALLINT(Int(32767)))
+    - Insert(INT(Int(2)),SMALLINT(Int(45535)),SMALLINT(Int(45535)),SMALLINT(Int(-12767)))
+    - Insert(INT(Int(3)),SMALLINT(Int(0)),SMALLINT(Int(0)),SMALLINT(Int(-32768)))
+
+# From Debezium MySqlUnsignedIntegerIT
+dbz_228_mediumint_unsigned:
+  prepare: |
+    CREATE TABLE dbz_228_mediumint_unsigned (
+      id int auto_increment NOT NULL,
+      c1 MEDIUMINT UNSIGNED ZEROFILL NOT NULL,
+      c2 MEDIUMINT UNSIGNED NOT NULL,
+      c3 MEDIUMINT NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_228_mediumint_unsigned VALUES (default, 16777215, 16777215, 8388607);
+    INSERT INTO dbz_228_mediumint_unsigned VALUES (default, 10777215, 10777215, -6388607);
+    INSERT INTO dbz_228_mediumint_unsigned VALUES (default, 0, 0, -8388608);
+  rows:
+    - Insert(INT(Int(1)),MEDIUMINT(Int(16777215)),MEDIUMINT(Int(16777215)),MEDIUMINT(Int(8388607)))
+    - Insert(INT(Int(2)),MEDIUMINT(Int(10777215)),MEDIUMINT(Int(10777215)),MEDIUMINT(Int(10388609)))
+    - Insert(INT(Int(3)),MEDIUMINT(Int(0)),MEDIUMINT(Int(0)),MEDIUMINT(Int(8388608)))
+
+# From Debezium MySqlUnsignedIntegerIT
+dbz_228_int_unsigned:
+  prepare: |
+    CREATE TABLE dbz_228_int_unsigned (
+      id int auto_increment NOT NULL,
+      c1 int(11) UNSIGNED ZEROFILL NOT NULL,
+      c2 int(11) UNSIGNED NOT NULL,
+      c3 int(11) NOT NULL,
+      c4 int(5) UNSIGNED ZEROFILL NOT NULL,
+      c5 int(5) UNSIGNED NOT NULL ,
+      c6 int(5) NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_228_int_unsigned VALUES (default, 4294967295, 4294967295, 2147483647, 4294967295, 4294967295, 2147483647);
+    INSERT INTO dbz_228_int_unsigned VALUES (default, 3294967295, 3294967295, -1147483647, 3294967295, 3294967295, -1147483647);
+    INSERT INTO dbz_228_int_unsigned VALUES (default, 0, 0, -2147483648, 0, 0, -2147483648);
+  rows:
+    - Insert(INT(Int(1)),INT(Int(4294967295)),INT(Int(4294967295)),INT(Int(2147483647)),INT(Int(4294967295)),INT(Int(4294967295)),INT(Int(2147483647)))
+    - Insert(INT(Int(2)),INT(Int(3294967295)),INT(Int(3294967295)),INT(Int(-1147483647)),INT(Int(3294967295)),INT(Int(3294967295)),INT(Int(-1147483647)))
+    - Insert(INT(Int(3)),INT(Int(0)),INT(Int(0)),INT(Int(-2147483648)),INT(Int(0)),INT(Int(0)),INT(Int(-2147483648)))
+
+# From Debezium MysqlDefaultValueIT
+dbz_228_bigint_unsigned:
+  prepare: |
+    CREATE TABLE dbz_228_bigint_unsigned (
+      id int auto_increment NOT NULL,
+      c1 BIGINT UNSIGNED ZEROFILL NOT NULL,
+      c2 BIGINT UNSIGNED NOT NULL,
+      c3 BIGINT NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_228_bigint_unsigned VALUES (default, 18446744073709551615, 18446744073709551615, 9223372036854775807);
+    INSERT INTO dbz_228_bigint_unsigned VALUES (default, 14446744073709551615, 14446744073709551615, -1223372036854775807);
+    INSERT INTO dbz_228_bigint_unsigned VALUES (default, 0, 0, -9223372036854775808);
+  rows:
+    - Insert(INT(Int(1)),BIGINT(UInt(18446744073709551615)),BIGINT(UInt(18446744073709551615)),BIGINT(Int(9223372036854775807)))
+    - Insert(INT(Int(2)),BIGINT(UInt(14446744073709551615)),BIGINT(UInt(14446744073709551615)),BIGINT(Int(-1223372036854775807)))
+    - Insert(INT(Int(3)),BIGINT(Int(0)),BIGINT(Int(0)),BIGINT(Int(-9223372036854775808)))
+
+# From Debezium MysqlDefaultValueIT
+dbz_1185_serial:
+  prepare: |
+    CREATE TABLE dbz_1185_serial (
+      id SERIAL NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_1185_serial VALUES (10);
+    INSERT INTO dbz_1185_serial VALUES (default);
+    INSERT INTO dbz_1185_serial VALUES (18446744073709551615);
+  rows:
+    - Insert(BIGINT(Int(10)))
+    - Insert(BIGINT(Int(11)))
+    - Insert(BIGINT(UInt(18446744073709551615)))
+
+# From Debezium MysqlDefaultValueIT
+dbz_1185_serial_default_value:
+  prepare: |
+    CREATE TABLE dbz_1185_serial_default_value (
+      id SMALLINT UNSIGNED SERIAL DEFAULT VALUE NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_1185_serial_default_value VALUES (10);
+    INSERT INTO dbz_1185_serial_default_value VALUES (default);
+    INSERT INTO dbz_1185_serial_default_value VALUES (1000);
+  rows:
+    - Insert(SMALLINT(Int(10)))
+    - Insert(SMALLINT(Int(11)))
+    - Insert(SMALLINT(Int(1000)))
