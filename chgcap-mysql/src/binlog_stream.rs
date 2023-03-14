@@ -192,7 +192,7 @@ impl MysqlEventHandler {
         let changes = match e {
             RowsEventData::WriteRowsEvent(e) => self.handle_write_rows(tme, e),
             RowsEventData::UpdateRowsEvent(e) => self.handle_update_rows(tme, e),
-            RowsEventData::DeleteRowsEvent(e) => self.handle_delete_rows(e),
+            RowsEventData::DeleteRowsEvent(e) => self.handle_delete_rows(tme, e),
             RowsEventData::PartialUpdateRowsEvent(_) => todo!(),
 
             RowsEventData::DeleteRowsEventV1(_)
@@ -248,8 +248,23 @@ impl MysqlEventHandler {
         Ok(changes)
     }
 
-    fn handle_delete_rows(&self, _e: DeleteRowsEvent) -> Result<Vec<MysqlChange>> {
-        todo!()
+    fn handle_delete_rows(
+        &self,
+        tme: &TableMapEvent,
+        e: DeleteRowsEvent,
+    ) -> Result<Vec<MysqlChange>> {
+        let mut changes: Vec<MysqlChange> = vec![];
+        for r in e.rows(tme) {
+            let row = r?;
+            let before = row
+                .0
+                .ok_or_else(|| anyhow!("'before' is missing in the UpdateRowsEvent"))?;
+            if row.1.is_some() {
+                bail!("unexpected 'after' in the UpdateRowsEvent")
+            }
+            changes.push(MysqlChange::Delete(before));
+        }
+        Ok(changes)
     }
 }
 

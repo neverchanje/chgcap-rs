@@ -457,7 +457,7 @@ dbz_228_int_unsigned:
     - Insert(INT(Int(2)),INT(Int(3294967295)),INT(Int(3294967295)),INT(Int(-1147483647)),INT(Int(3294967295)),INT(Int(3294967295)),INT(Int(-1147483647)))
     - Insert(INT(Int(3)),INT(Int(0)),INT(Int(0)),INT(Int(-2147483648)),INT(Int(0)),INT(Int(0)),INT(Int(-2147483648)))
 
-# From Debezium MysqlDefaultValueIT
+# From Debezium MySqlUnsignedIntegerIT
 dbz_228_bigint_unsigned:
   prepare: |
     CREATE TABLE dbz_228_bigint_unsigned (
@@ -475,7 +475,7 @@ dbz_228_bigint_unsigned:
     - Insert(INT(Int(2)),BIGINT(UInt(14446744073709551615)),BIGINT(UInt(14446744073709551615)),BIGINT(Int(-1223372036854775807)))
     - Insert(INT(Int(3)),BIGINT(Int(0)),BIGINT(Int(0)),BIGINT(Int(-9223372036854775808)))
 
-# From Debezium MysqlDefaultValueIT
+# From Debezium MySqlUnsignedIntegerIT
 dbz_1185_serial:
   prepare: |
     CREATE TABLE dbz_1185_serial (
@@ -490,7 +490,7 @@ dbz_1185_serial:
     - Insert(BIGINT(Int(11)))
     - Insert(BIGINT(UInt(18446744073709551615)))
 
-# From Debezium MysqlDefaultValueIT
+# From Debezium MySqlUnsignedIntegerIT
 dbz_1185_serial_default_value:
   prepare: |
     CREATE TABLE dbz_1185_serial_default_value (
@@ -505,7 +505,7 @@ dbz_1185_serial_default_value:
     - Insert(SMALLINT(Int(11)))
     - Insert(SMALLINT(Int(1000)))
 
-# From Debezium MysqlDefaultValueIT
+# From Debezium MySqlTimestampColumnIT
 t_user_black_list:
   prepare: |
     CREATE TABLE t_user_black_list (
@@ -524,3 +524,50 @@ t_user_black_list:
     - Insert(INT(Int(1)),VARCHAR(Bytes("test")),DATETIME2(Date("'2023-03-12 12:25:27'")),DATETIME2(Date("'2023-03-12 12:25:27'")))
     - Delete(INT(Int(1)),VARCHAR(Bytes("test")),DATETIME2(Date("'2023-03-12 12:25:27'")),DATETIME2(Date("'2023-03-12 12:25:27'")))
     - Insert(INT(Int(1)),VARCHAR(Bytes("test2")),DATETIME2(Date("'2023-03-12 12:25:27'")),DATETIME2(Date("'2023-03-12 12:25:27'")))
+
+# From Debezium ReadBinLogIT
+person:
+  prepare: |
+    DROP TABLE IF EXISTS person;
+    CREATE TABLE person (
+      name VARCHAR(255) primary key,
+      age INTEGER NULL DEFAULT 10
+    );
+    INSERT INTO person(name,age) VALUES ('Georgia',30);
+    UPDATE person SET name = 'Maggie' WHERE name = 'Georgia';
+    DELETE FROM person WHERE name = 'Maggie';
+    INSERT INTO person(name,age) VALUES ('Georgia',30);
+    INSERT INTO person(name,age) VALUES ('Janice',19);
+    UPDATE person SET name = 'Maggie' WHERE name = 'Georgia';
+    UPDATE person SET name = 'Jamie' WHERE name = 'Janice';
+    DELETE FROM person WHERE name = 'Maggie';
+    DELETE FROM person WHERE name = 'Jamie';
+    INSERT INTO person(name,age) VALUES ('Georgia',30),('Janice',19);
+    UPDATE person SET name =
+      CASE 
+      WHEN name = 'Georgia' THEN 'Maggie'
+      WHEN name = 'Janice' THEN 'Jamie'
+      END
+    WHERE name IN ('Georgia','Janice');
+    DELETE FROM person WHERE name IN ('Maggie','Jamie');
+  rows:
+    - Insert(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    - Delete(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    - Insert(VARCHAR(Bytes("Maggie")),INT(Int(30)))
+    - Delete(VARCHAR(Bytes("Maggie")),INT(Int(30)))
+    - Insert(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    - Insert(VARCHAR(Bytes("Janice")),INT(Int(19)))
+    - Delete(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    - Insert(VARCHAR(Bytes("Maggie")),INT(Int(30)))
+    - Delete(VARCHAR(Bytes("Janice")),INT(Int(19)))
+    - Insert(VARCHAR(Bytes("Jamie")),INT(Int(19)))
+    - Delete(VARCHAR(Bytes("Maggie")),INT(Int(30)))
+    - Delete(VARCHAR(Bytes("Jamie")),INT(Int(19)))
+    - Insert(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    - Insert(VARCHAR(Bytes("Janice")),INT(Int(19)))
+    - Delete(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    - Insert(VARCHAR(Bytes("Maggie")),INT(Int(30)))
+    - Delete(VARCHAR(Bytes("Janice")),INT(Int(19)))
+    - Insert(VARCHAR(Bytes("Jamie")),INT(Int(19)))
+    - Delete(VARCHAR(Bytes("Jamie")),INT(Int(19)))
+    - Delete(VARCHAR(Bytes("Maggie")),INT(Int(30)))
