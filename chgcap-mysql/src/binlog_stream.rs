@@ -7,13 +7,12 @@ use mysql_async::binlog::events::{
     DeleteRowsEvent, Event, EventData, GtidEvent, IncidentEvent, QueryEvent, RotateEvent,
     RowsEventData, RowsQueryEvent, TableMapEvent, UpdateRowsEvent, WriteRowsEvent,
 };
-use mysql_async::BinlogStream;
+use mysql_async::{BinlogStream, Pool, BinlogRequest};
 use pin_project::pin_project;
 
-use crate::connection::get_binlog_stream;
 use crate::record::MysqlTableEvent;
 use crate::source::{MysqlSource, SourceContext};
-use crate::MysqlChange;
+use crate::{MysqlChange, MysqlSourceConfig};
 
 #[pin_project]
 pub struct MysqlCdcStream {
@@ -32,6 +31,14 @@ impl MysqlCdcStream {
             handler: MysqlEventHandler::new(),
         })
     }
+}
+
+async fn get_binlog_stream(pool: &Pool, cfg: &MysqlSourceConfig) -> Result<BinlogStream> {
+    let conn = pool.get_conn().await?;
+    let binlog_stream = conn
+        .get_binlog_stream(BinlogRequest::new(cfg.server_id()))
+        .await?;
+    Ok(binlog_stream)
 }
 
 pub struct MysqlEventHandler {

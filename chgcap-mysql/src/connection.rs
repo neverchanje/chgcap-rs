@@ -1,17 +1,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use mysql_async::{BinlogRequest, BinlogStream, Conn, Pool};
-
-use crate::config::MysqlSourceConfig;
-
-pub async fn get_binlog_stream(pool: &Pool, cfg: &MysqlSourceConfig) -> Result<BinlogStream> {
-    let conn = pool.get_conn().await?;
-    let binlog_stream = conn
-        .get_binlog_stream(BinlogRequest::new(cfg.server_id()))
-        .await?;
-    Ok(binlog_stream)
-}
+use mysql_async::Conn;
 
 pub struct BinlogPosition {
     filename: String,

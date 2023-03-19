@@ -1,6 +1,10 @@
 # chgcap - Change-Data-Capture Connectors Library
 
-chgcap is an open-source library for Change-Data-Capture (CDC). Written in Rust, it is designed to be a drop-in replacement for Debezium, providing an alternative to the Java-based ecosystem. We initially focus on the Rust API, but will consider other language bindings if there are many requests for them.
+Chgcap is an open-source library for Change-Data-Capture (CDC) written in Rust. It provides an alternative to Debezium, which is mostly limited to the Java ecosystem. With Chgcap, developers can more easily build custom replicas for their RDBMS. Use cases include creating real-time MySQL caches or real-time OLAP engines for Postgres.
+
+We initially focus on the Rust API, but will consider other language bindings if there are many requests for them.
+
+**NOTE:** Chgap is currently in its early development phase. When it reaches the beta stage, I will publish a beta version on crates.io. My initial objective is to create a DuckDB+MySQL CDC demo, which will show how to create a straightforward yet powerful MySQL replica with OLAP functionality. If this is something you are interested in, make sure to follow us for updates.
 
 ## Features
 
