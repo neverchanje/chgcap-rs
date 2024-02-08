@@ -13,10 +13,6 @@ pub struct MysqlConn {
 }
 
 impl MysqlConn {
-    pub fn new(conn: Conn) -> Self {
-        Self { conn }
-    }
-
     /// Determine whether the MySQL server has the binlog_row_image set to 'FULL'.
     /// Returns `true` if the server's `binlog_row_image` is set to `FULL`, or `false` otherwise.
     pub fn is_binlog_row_image_full(&self) -> Result<bool> {
@@ -63,13 +59,6 @@ impl MysqlConn {
     ///
     /// Returns the session variables that are related to session SSL version.
     pub fn session_variable_ssl_version() -> Result<String> {
-        todo!()
-    }
-
-    /// Determine whether the MySQL server has GTIDs enabled.
-    ///
-    /// Returns `false` if the server's `gtid_mode` is set and is `OFF`, or `true` otherwise.
-    pub fn is_gtid_mode_enabled(&self) -> Result<bool> {
         todo!()
     }
 

@@ -16,11 +16,13 @@ mod schema;
 mod source;
 #[allow(dead_code)]
 mod state;
+#[allow(dead_code)]
+mod snapshot;
 
 #[macro_use]
 extern crate derive_builder;
 
-pub use binlog_stream::MysqlCdcStream;
+pub use binlog_stream::MysqlBinlogStream;
 pub use config::{MysqlSourceConfig, MysqlSourceConfigBuilder};
 pub use record::{MysqlChange, MysqlTableEvent};
 pub use source::MysqlSource;

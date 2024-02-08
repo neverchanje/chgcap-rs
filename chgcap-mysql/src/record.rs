@@ -25,13 +25,13 @@ fn fmt_column_type(c: &ColumnType) -> String {
         ColumnType::MYSQL_TYPE_TIME => "TIME",
         ColumnType::MYSQL_TYPE_DATETIME => "DATETIME",
         ColumnType::MYSQL_TYPE_YEAR => "YEAR",
-        ColumnType::MYSQL_TYPE_NEWDATE => "NEWDATE",
+        ColumnType::MYSQL_TYPE_NEWDATE => "NEWDATE", // Internal to MySql
         ColumnType::MYSQL_TYPE_VARCHAR => "VARCHAR",
         ColumnType::MYSQL_TYPE_BIT => "BIT",
         ColumnType::MYSQL_TYPE_TIMESTAMP2 => "TIMESTAMP2",
         ColumnType::MYSQL_TYPE_DATETIME2 => "DATETIME2",
         ColumnType::MYSQL_TYPE_TIME2 => "TIME2",
-        ColumnType::MYSQL_TYPE_TYPED_ARRAY => "TYPED ARRAY",
+        ColumnType::MYSQL_TYPE_TYPED_ARRAY => "TYPED ARRAY", // Used for replication only
         ColumnType::MYSQL_TYPE_UNKNOWN => "UNKNOWN",
         ColumnType::MYSQL_TYPE_JSON => "JSON",
         ColumnType::MYSQL_TYPE_NEWDECIMAL => "NEWDECIMAL",

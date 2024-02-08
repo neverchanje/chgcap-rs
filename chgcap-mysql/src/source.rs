@@ -3,7 +3,7 @@ use mysql_async::binlog::events::GtidEvent;
 
 use crate::config::MysqlSourceConfig;
 use crate::connection::MysqlConn;
-use crate::MysqlCdcStream;
+use crate::MysqlBinlogStream;
 
 /// The MySQL CDC Source which supports parallel reading snapshot of table
 /// and then continue to capture data change from binlog.
@@ -38,8 +38,8 @@ impl MysqlSource {
         })
     }
 
-    pub async fn cdc_stream(&self) -> Result<MysqlCdcStream> {
-        MysqlCdcStream::new(self).await
+    pub async fn cdc_stream(&self) -> Result<MysqlBinlogStream> {
+        MysqlBinlogStream::new(self).await
     }
 }
 

@@ -5,9 +5,11 @@ use anyhow::{anyhow, bail, Result};
 use log::{debug, error, info, warn};
 use mysql_async::binlog::events::{
     DeleteRowsEvent, Event, EventData, GtidEvent, IncidentEvent, QueryEvent, RotateEvent,
-    RowsEventData, RowsQueryEvent, TableMapEvent, UpdateRowsEvent, WriteRowsEvent,
+    RowsEventData, RowsQueryEvent, TableMapEvent, TransactionPayloadEvent, UpdateRowsEvent,
+    WriteRowsEvent,
 };
-use mysql_async::{BinlogStream, Pool, BinlogRequest};
+use mysql_async::prelude::Query;
+use mysql_async::{BinlogStream, BinlogStreamRequest, Conn, Pool, Row};
 use pin_project::pin_project;
 
 use crate::record::MysqlTableEvent;
@@ -15,14 +17,16 @@ use crate::source::{MysqlSource, SourceContext};
 use crate::{MysqlChange, MysqlSourceConfig};
 
 #[pin_project]
-pub struct MysqlCdcStream {
+pub struct MysqlBinlogStream {
     #[pin]
     binlog_stream: BinlogStream,
+
+    // `pin_project` doesn't project methods, so we encapsulate methods in a handler.
     #[pin]
     handler: MysqlEventHandler,
 }
 
-impl MysqlCdcStream {
+impl MysqlBinlogStream {
     pub async fn new(source: &MysqlSource) -> Result<Self> {
         let binlog_stream = get_binlog_stream(&source.pool, &source.cfg).await?;
 
@@ -33,12 +37,43 @@ impl MysqlCdcStream {
     }
 }
 
+/// Ensures that the MySQL server has GTIDs enabled.
+async fn check_gtid_mode_enabled(conn: &mut Conn) -> Result<()> {
+    let opt_gtid_mode = "SELECT @@GLOBAL.GTID_MODE".first::<String, _>(conn).await?;
+    if let Some(gtid_mode) = opt_gtid_mode {
+        if gtid_mode.starts_with("ON") {
+            return Ok(());
+        }
+    }
+    bail!("GTID_MODE is disabled (enable using --gtid_mode=ON --enforce_gtid_consistency=ON)");
+}
+
+async fn create_binlog_stream_conn(pool: &Pool) -> Result<(Conn, Vec<u8>, u64)> {
+    let mut conn = pool.get_conn().await.unwrap();
+    check_gtid_mode_enabled(&mut conn);
+
+    if conn.server_version() >= (8, 0, 31) && conn.server_version() < (9, 0, 0) {
+        let _ = "SET binlog_transaction_compression=ON"
+            .ignore(&mut conn)
+            .await;
+    }
+
+    let row: Row = "SHOW BINARY LOGS".first(&mut conn).await.unwrap().unwrap();
+    let filename = row.get(0).unwrap();
+    let position = row.get(1).unwrap();
+
+    Ok((conn, filename, position))
+}
+
 async fn get_binlog_stream(pool: &Pool, cfg: &MysqlSourceConfig) -> Result<BinlogStream> {
-    let conn = pool.get_conn().await?;
-    let binlog_stream = conn
-        .get_binlog_stream(BinlogRequest::new(cfg.server_id()))
-        .await?;
-    Ok(binlog_stream)
+    let (conn, filename, position) = create_binlog_stream_conn(pool).await?;
+
+    let request = BinlogStreamRequest::new(cfg.server_id())
+        .with_filename(&filename)
+        .with_pos(position);
+    conn.get_binlog_stream(request)
+        .await
+        .map_err(|e| anyhow!(e))
 }
 
 pub struct MysqlEventHandler {
@@ -53,6 +88,8 @@ impl MysqlEventHandler {
     }
 
     /// Returns `Ok(None)` if the event is skipped.
+    /// See [https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_replication_binlog_event.html] for the description of each event type.
+    /// We only support binlog version 4, which corresponds to MySQL 5.0 and later.
     fn handle_event(
         &mut self,
         stream: &BinlogStream,
@@ -72,44 +109,51 @@ impl MysqlEventHandler {
             EventData::GtidEvent(e) => self.handle_gtid_event(e),
             EventData::RowsEvent(e) => return Ok(Some(self.handle_rows_event(stream, e)?)),
             EventData::TableMapEvent(_) => {
-                // [`BinlogStream`] already handles this event. Internally, it maintains a table
+                // [`BinlogStream`] has already handled this event. Internally, it maintains a table
                 // mapping from table ID to table name.
             }
+            EventData::XidEvent(_) => self.handle_txn_completion(),
+            EventData::TransactionPayloadEvent(e) => self.handle_txn_payload(e),
             _ => {
                 // EventData::UnknownEvent => todo!(),
-                // EventData::StartEventV3(_) => todo!(),
+                // EventData::StartEventV3(_) => todo!(), // Deprecated.
                 // EventData::StopEvent => todo!(),
                 // EventData::IntvarEvent(_) => todo!(),
-                // EventData::LoadEvent(_) => todo!(),
-                // EventData::SlaveEvent => todo!(),
-                // EventData::CreateFileEvent(_) => todo!(),
-                // EventData::AppendBlockEvent(_) => todo!(),
-                // EventData::ExecLoadEvent(_) => todo!(),
-                // EventData::DeleteFileEvent(_) => todo!(),
-                // EventData::NewLoadEvent(_) => todo!(),
+                // EventData::LoadEvent(_) => todo!(), // Deprecated.
+                // EventData::SlaveEvent => todo!(), // Deprecated.
+                // EventData::CreateFileEvent(_) => todo!(), // Deprecated.
+                // EventData::AppendBlockEvent(_) => todo!(), // Ignored.
+                // EventData::ExecLoadEvent(_) => todo!(), // Deprecated.
+                // EventData::DeleteFileEvent(_) => todo!(), // Ignored.
+                // EventData::NewLoadEvent(_) => todo!(), // Deprecated.
                 // EventData::RandEvent(_) => todo!(),
                 // EventData::UserVarEvent(_) => todo!(),
                 // EventData::FormatDescriptionEvent(_) => todo!(),
-                // EventData::XidEvent(_) => todo!(),
                 // EventData::BeginLoadQueryEvent(_) => todo!(),
                 // EventData::ExecuteLoadQueryEvent(_) => todo!(),
-                // EventData::PreGaWriteRowsEvent(_) => todo!(),
-                // EventData::PreGaUpdateRowsEvent(_) => todo!(),
-                // EventData::PreGaDeleteRowsEvent(_) => todo!(),
+                // EventData::PreGaWriteRowsEvent(_) => todo!(), // Deprecated.
+                // EventData::PreGaUpdateRowsEvent(_) => todo!(), // Deprecated.
+                // EventData::PreGaDeleteRowsEvent(_) => todo!(), // Deprecated.
                 // EventData::IncidentEvent(_) => todo!(),
-                // EventData::IgnorableEvent(_) => todo!(),
-                // EventData::AnonymousGtidEvent(_) => todo!(),
-                // EventData::PreviousGtidsEvent(_) => todo!(),
-                // EventData::TransactionContextEvent(_) => todo!(),
-                // EventData::ViewChangeEvent(_) => todo!(),
-                // EventData::XaPrepareLogEvent(_) => todo!(),
+                // EventData::IgnorableEvent(_) => todo!(), // Ignored.
+                // EventData::AnonymousGtidEvent(_) => todo!(), // Ignored.
+                // EventData::PreviousGtidsEvent(_) => todo!(), // Ignored.
+                // EventData::TransactionContextEvent(_) => todo!(), // Ignored.
+                // EventData::ViewChangeEvent(_) => todo!(), // Ignored.
+                // EventData::XaPrepareLogEvent(_) => todo!(), // Ignored.
             }
         };
         Ok(None)
     }
 
+    fn handle_txn_payload(&self, e: TransactionPayloadEvent) {
+        todo!()
+    }
+
     /// Handle a [mysql_async::binlog::events::XidEvent] or a COMMIT statement.
-    fn handle_txn_completion(&self) {}
+    fn handle_txn_completion(&self) {
+        todo!()
+    }
 
     /// Handle the supplied event that signals that mysqld has stopped.
     fn handle_server_stop(&self) {
@@ -118,7 +162,9 @@ impl MysqlEventHandler {
 
     /// Handle the supplied event that is sent by a primary to a replica to let the replica
     /// know that the primary is still alive. Not written to a binary log.
-    fn handle_server_heartbeat(&self) {}
+    fn handle_server_heartbeat(&self) {
+        debug!("server heartbeat")
+    }
 
     /// Handle the supplied event that signals that an out of the ordinary event that occurred on
     /// the master. It notifies the replica that something happened on the primary that might
@@ -275,7 +321,7 @@ impl MysqlEventHandler {
     }
 }
 
-impl futures_core::stream::Stream for MysqlCdcStream {
+impl futures_core::stream::Stream for MysqlBinlogStream {
     type Item = Result<MysqlTableEvent>;
 
     fn poll_next(
@@ -283,7 +329,7 @@ impl futures_core::stream::Stream for MysqlCdcStream {
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
-        // TODO: Add rate limiting here.
+        // TODO: Support rate limiting.
         loop {
             return match this.binlog_stream.as_mut().poll_next(cx) {
                 Poll::Ready(t) => match t {

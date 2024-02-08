@@ -4,7 +4,7 @@ Chgcap is an open-source library for Change-Data-Capture (CDC) written in Rust. 
 
 We initially focus on the Rust API, but will consider other language bindings if there are many requests for them.
 
-**NOTE:** Chgap is currently in its early development phase. When it reaches the beta stage, I will publish a beta version on crates.io. My initial objective is to create a DuckDB+MySQL CDC demo, which will show how to create a straightforward yet powerful MySQL replica with OLAP functionality. If this is something you are interested in, make sure to follow us for updates.
+**WARNING:** Chgap is currently in its early development phase. When it reaches the beta stage, I will publish a beta version on crates.io. My initial objective is to create a DuckDB+MySQL CDC demo, which will showcase how to create a MySQL replica with OLAP functionality. If this is something you are interested in, welcome to follow us for updates.
 
 ## Features
 
@@ -19,9 +19,9 @@ It aims to provide all main features supported by Debezium, including:
 
 ### Supported Databases
 
-| Connector    | Database | Driver                                                         |
-| ------------ | -------- | -------------------------------------------------------------- |
-| chgcap-mysql | MySQL    | [mysql_async](https://docs.rs/mysql_async/latest/mysql_async/) |
+| Connector    | Databases | Driver                                                         |
+| ------------ | --------- | -------------------------------------------------------------- |
+| chgcap-mysql | MySQL     | [mysql_async](https://docs.rs/mysql_async/latest/mysql_async/) |
 
 ## Getting Started
 
@@ -29,7 +29,9 @@ It aims to provide all main features supported by Debezium, including:
 
 To install chgcap, use `cargo`:
 
-`$ cargo install chgcap`
+```sh
+cargo install chgcap
+```
 
 ### Usage
 
@@ -37,14 +39,14 @@ To use chgcap, you must first configure a connector for the source database. Onc
 
 ## Documentation
 
-The full documentation can be found on [GitHub](https://github.com/
+The full documentation can be found on https://github.com/neverchanje/chgcap-rs
 
 ## Credits
 
 chgcap was inspired by and uses some code from the following open-source projects:
 
-- [Rust MySQL CDC](https://github.com/rusuly/mysql_cdc)
 - [Flink CDC Connectors](https://github.com/ververica/flink-cdc-connectors)
+- [Debezium](https://github.com/debezium/debezium)
 
 ## License
 
