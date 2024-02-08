@@ -45,7 +45,7 @@ async fn check_gtid_mode_enabled(conn: &mut Conn) -> Result<()> {
 
 async fn create_binlog_stream_conn(pool: &Pool) -> Result<(Conn, Vec<u8>, u64)> {
     let mut conn = pool.get_conn().await.unwrap();
-    check_gtid_mode_enabled(&mut conn);
+    check_gtid_mode_enabled(&mut conn).await?;
 
     if conn.server_version() >= (8, 0, 31) && conn.server_version() < (9, 0, 0) {
         let _ = "SET binlog_transaction_compression=ON"
@@ -75,11 +75,7 @@ impl BinlogStream {
     /// Returns `Ok(None)` if the event is skipped.
     /// See [https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_replication_binlog_event.html] for the description of each event type.
     /// We only support binlog version 4, which corresponds to MySQL 5.0 and later.
-    fn handle_event(
-        &mut self,
-        stream: &MysqlBinlogStream,
-        event: Event,
-    ) -> Result<Option<ChgcapEvent>> {
+    fn handle_event(&mut self, event: Event) -> Result<Option<ChgcapEvent>> {
         let event_data = match event.read_data()? {
             Some(data) => data,
             None => return Ok(None), // Skip empty event.
@@ -92,7 +88,9 @@ impl BinlogStream {
             EventData::HeartbeatEvent => self.handle_server_heartbeat(),
             EventData::RowsQueryEvent(e) => self.handle_rows_query(e),
             EventData::GtidEvent(e) => self.handle_gtid_event(e),
-            EventData::RowsEvent(e) => return Ok(Some(self.handle_rows_event(stream, e)?.into())),
+            EventData::RowsEvent(e) => {
+                return Ok(Some(self.handle_rows_event(&self.binlog_stream, e)?.into()))
+            }
             EventData::TableMapEvent(_) => {
                 // [`BinlogStream`] has already handled this event. Internally, it maintains a table
                 // mapping from table ID to table name.
@@ -132,7 +130,7 @@ impl BinlogStream {
     }
 
     fn handle_txn_payload(&self, e: TransactionPayloadEvent) {
-        todo!()
+        debug!("Received transaction payload: {:?}", e)
     }
 
     /// Handle a [mysql_async::binlog::events::XidEvent] or a COMMIT statement.
@@ -311,14 +309,14 @@ impl futures_core::stream::Stream for BinlogStream {
         self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        let mut this = self.get_mut();
+        let this = self.get_mut();
         // TODO: Support rate limiting.
         loop {
             let binlog_stream = Pin::new(&mut this.binlog_stream);
             return match binlog_stream.poll_next(cx) {
                 Poll::Ready(t) => match t {
                     Some(event_result) => match event_result {
-                        Ok(event) => match this.handle_event(&this.binlog_stream, event) {
+                        Ok(event) => match this.handle_event(event) {
                             Ok(change) => match change {
                                 Some(c) => Poll::Ready(Some(Ok(c))),
                                 None => continue, // Skip this event.

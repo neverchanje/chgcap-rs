@@ -12,8 +12,7 @@ futures-core = "0.3"
 getset = "0.1"
 itertools = "0.12"
 log = "0.4"
-mysql_async = { vesion = "0.33", features = ["binlog"] }
-pin-project = "1"
+mysql_async = { version = "0.33", features = ["binlog"] }
 tokio-stream = "0.1"
 
 [dev-dependencies]

@@ -2,7 +2,6 @@ use anyhow::Result;
 use mysql_async::binlog::events::GtidEvent;
 
 use crate::config::SourceConfig;
-use crate::connection::MysqlConn;
 use crate::BinlogStream;
 
 /// The MySQL CDC Source which supports parallel reading snapshot of table
@@ -13,7 +12,6 @@ use crate::BinlogStream;
 /// 3. The source doesn't need apply any lock of MySQL.
 pub struct Source {
     pub(crate) cfg: SourceConfig,
-    pub(crate) conn: MysqlConn,
     pub(crate) pool: mysql_async::Pool,
 }
 
@@ -30,12 +28,7 @@ impl Source {
             )
             .as_str(),
         );
-        let conn = pool.get_conn().await?;
-        Ok(Self {
-            cfg,
-            conn: MysqlConn::new(conn),
-            pool,
-        })
+        Ok(Self { cfg, pool })
     }
 
     pub async fn cdc_stream(&self) -> Result<BinlogStream> {

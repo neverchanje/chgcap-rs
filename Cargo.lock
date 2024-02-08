@@ -322,7 +322,6 @@ dependencies = [
  "lazy_static",
  "log",
  "mysql_async",
- "pin-project",
  "serde",
  "serde_yaml",
  "testcontainers",
