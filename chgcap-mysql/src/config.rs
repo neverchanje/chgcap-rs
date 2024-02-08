@@ -36,7 +36,7 @@ pub struct CommonConfig {
 
 /// TODO: Allow to load configurations from a YAML file.
 #[derive(Builder, Debug, Clone, Getters, CopyGetters)]
-pub struct MysqlSourceConfig {
+pub struct SourceConfig {
     /// The maximum time that the connector should wait after trying to connect to the MySQL
     /// database server before timing out.
     #[getset(get = "pub")]
@@ -126,7 +126,7 @@ pub struct MysqlSourceConfig {
     username: String,
 }
 
-impl Default for MysqlSourceConfig {
+impl Default for SourceConfig {
     fn default() -> Self {
         Self {
             connect_timeout: Duration::from_secs(5),

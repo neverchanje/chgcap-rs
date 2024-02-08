@@ -5,24 +5,24 @@ mod config;
 #[allow(dead_code)]
 mod connection;
 #[allow(dead_code)]
+mod event;
+#[allow(dead_code)]
 mod gtid;
 #[allow(dead_code)]
 mod metrics;
 #[allow(dead_code)]
-mod record;
-#[allow(dead_code)]
 mod schema;
+#[allow(dead_code)]
+mod snapshot;
 #[allow(dead_code)]
 mod source;
 #[allow(dead_code)]
 mod state;
-#[allow(dead_code)]
-mod snapshot;
 
 #[macro_use]
 extern crate derive_builder;
 
-pub use binlog_stream::MysqlBinlogStream;
-pub use config::{MysqlSourceConfig, MysqlSourceConfigBuilder};
-pub use record::{MysqlChange, MysqlTableEvent};
-pub use source::MysqlSource;
+pub use binlog_stream::BinlogStream;
+pub use config::SourceConfig;
+pub use event::{DataChangeEvent, RowChange};
+pub use source::Source;

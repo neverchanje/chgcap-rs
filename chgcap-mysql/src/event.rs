@@ -4,7 +4,7 @@ use mysql_async::binlog::value::BinlogValue;
 use mysql_async::consts::ColumnType;
 
 #[derive(Clone, PartialEq)]
-pub enum MysqlChange {
+pub enum RowChange {
     Insert(BinlogRow),
     Delete(BinlogRow),
 }
@@ -67,7 +67,7 @@ fn fmt_row(row: &BinlogRow) -> String {
         .join(",")
 }
 
-impl std::fmt::Display for MysqlChange {
+impl std::fmt::Display for RowChange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Insert(row) => write!(f, "Insert({})", fmt_row(row)),
@@ -77,8 +77,29 @@ impl std::fmt::Display for MysqlChange {
 }
 
 #[derive(Clone, PartialEq)]
-pub struct MysqlTableEvent {
+pub struct DataChangeEvent {
     pub table_name: String,
     pub table_id: u64,
-    pub changes: Vec<MysqlChange>,
+    pub changes: Vec<RowChange>,
+}
+
+#[derive(Clone, PartialEq)]
+pub struct SchemaChangeEvent {}
+
+#[derive(Clone, PartialEq)]
+pub enum Event {
+    DataChange(DataChangeEvent),
+    SchemaChange(SchemaChangeEvent),
+}
+
+impl From<DataChangeEvent> for Event {
+    fn from(e: DataChangeEvent) -> Self {
+        Self::DataChange(e)
+    }
+}
+
+impl From<SchemaChangeEvent> for Event {
+    fn from(e: SchemaChangeEvent) -> Self {
+        Self::SchemaChange(e)
+    }
 }

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Result};
-use chgcap_mysql::{MysqlSource, MysqlSourceConfigBuilder, MysqlTableEvent};
+use chgcap_mysql::{Source, MysqlSourceConfigBuilder, DataChangeEvent};
 use mysql_async::prelude::Query;
 use mysql_async::{Conn, Pool};
 use serde::Deserialize;
@@ -17,7 +17,7 @@ struct TableData {
     rows: Vec<String>,
 }
 
-async fn consume_cdc_events() -> Result<Vec<MysqlTableEvent>> {
+async fn consume_cdc_events() -> Result<Vec<DataChangeEvent>> {
     let cfg = MysqlSourceConfigBuilder::default()
         .hostname("127.0.0.1".into())
         .port(3306)
@@ -28,7 +28,7 @@ async fn consume_cdc_events() -> Result<Vec<MysqlTableEvent>> {
         .build()
         .unwrap();
 
-    let source = MysqlSource::new(cfg).await.unwrap();
+    let source = Source::new(cfg).await.unwrap();
     let cdc_stream = source
         .cdc_stream()
         .await
@@ -36,7 +36,7 @@ async fn consume_cdc_events() -> Result<Vec<MysqlTableEvent>> {
         .timeout(Duration::from_secs(1));
     tokio::pin!(cdc_stream);
 
-    let mut events: Vec<MysqlTableEvent> = vec![];
+    let mut events: Vec<DataChangeEvent> = vec![];
     while let Ok(Some(c)) = cdc_stream.try_next().await {
         events.push(c?);
     }

@@ -9,30 +9,25 @@ use mysql_async::binlog::events::{
     WriteRowsEvent,
 };
 use mysql_async::prelude::Query;
-use mysql_async::{BinlogStream, BinlogStreamRequest, Conn, Pool, Row};
-use pin_project::pin_project;
+use mysql_async::{BinlogStream as MysqlBinlogStream, BinlogStreamRequest, Conn, Pool, Row};
 
-use crate::record::MysqlTableEvent;
-use crate::source::{MysqlSource, SourceContext};
-use crate::{MysqlChange, MysqlSourceConfig};
+use crate::event::{DataChangeEvent, Event as ChgcapEvent};
+use crate::source::{Source, SourceContext};
+use crate::{RowChange, SourceConfig};
 
-#[pin_project]
-pub struct MysqlBinlogStream {
-    #[pin]
-    binlog_stream: BinlogStream,
+pub struct BinlogStream {
+    binlog_stream: MysqlBinlogStream,
 
-    // `pin_project` doesn't project methods, so we encapsulate methods in a handler.
-    #[pin]
-    handler: MysqlEventHandler,
+    ctx: SourceContext,
 }
 
-impl MysqlBinlogStream {
-    pub async fn new(source: &MysqlSource) -> Result<Self> {
+impl BinlogStream {
+    pub async fn new(source: &Source) -> Result<Self> {
         let binlog_stream = get_binlog_stream(&source.pool, &source.cfg).await?;
 
         Ok(Self {
             binlog_stream,
-            handler: MysqlEventHandler::new(),
+            ctx: SourceContext::default(),
         })
     }
 }
@@ -65,7 +60,7 @@ async fn create_binlog_stream_conn(pool: &Pool) -> Result<(Conn, Vec<u8>, u64)> 
     Ok((conn, filename, position))
 }
 
-async fn get_binlog_stream(pool: &Pool, cfg: &MysqlSourceConfig) -> Result<BinlogStream> {
+async fn get_binlog_stream(pool: &Pool, cfg: &SourceConfig) -> Result<MysqlBinlogStream> {
     let (conn, filename, position) = create_binlog_stream_conn(pool).await?;
 
     let request = BinlogStreamRequest::new(cfg.server_id())
@@ -76,25 +71,15 @@ async fn get_binlog_stream(pool: &Pool, cfg: &MysqlSourceConfig) -> Result<Binlo
         .map_err(|e| anyhow!(e))
 }
 
-pub struct MysqlEventHandler {
-    ctx: SourceContext,
-}
-
-impl MysqlEventHandler {
-    pub fn new() -> Self {
-        Self {
-            ctx: SourceContext::default(),
-        }
-    }
-
+impl BinlogStream {
     /// Returns `Ok(None)` if the event is skipped.
     /// See [https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_replication_binlog_event.html] for the description of each event type.
     /// We only support binlog version 4, which corresponds to MySQL 5.0 and later.
     fn handle_event(
         &mut self,
-        stream: &BinlogStream,
+        stream: &MysqlBinlogStream,
         event: Event,
-    ) -> Result<Option<MysqlTableEvent>> {
+    ) -> Result<Option<ChgcapEvent>> {
         let event_data = match event.read_data()? {
             Some(data) => data,
             None => return Ok(None), // Skip empty event.
@@ -107,7 +92,7 @@ impl MysqlEventHandler {
             EventData::HeartbeatEvent => self.handle_server_heartbeat(),
             EventData::RowsQueryEvent(e) => self.handle_rows_query(e),
             EventData::GtidEvent(e) => self.handle_gtid_event(e),
-            EventData::RowsEvent(e) => return Ok(Some(self.handle_rows_event(stream, e)?)),
+            EventData::RowsEvent(e) => return Ok(Some(self.handle_rows_event(stream, e)?.into())),
             EventData::TableMapEvent(_) => {
                 // [`BinlogStream`] has already handled this event. Internally, it maintains a table
                 // mapping from table ID to table name.
@@ -180,6 +165,8 @@ impl MysqlEventHandler {
     fn handle_rotate(&mut self, e: RotateEvent) {
         self.ctx.current_binlog_pos = e.position();
         self.ctx.current_binlog_filename = e.name().to_string();
+
+        debug!("Rotated to binlog file: {}", e.name());
     }
 
     /// Handle the supplied event that signals the beginning of a GTID transaction.
@@ -233,9 +220,9 @@ impl MysqlEventHandler {
     /// Generate source records for the supplied event.
     fn handle_rows_event(
         &self,
-        stream: &BinlogStream,
+        stream: &MysqlBinlogStream,
         e: RowsEventData,
-    ) -> Result<MysqlTableEvent> {
+    ) -> Result<DataChangeEvent> {
         let tme = stream.get_tme(e.table_id()).ok_or_else(|| {
             anyhow!(
                 "Received a rows event for table id {} but no table metadata was found",
@@ -254,18 +241,14 @@ impl MysqlEventHandler {
                 "Received an unsupported V1 event, which is for mariadb and mysql 5.1.15-5.6.x."
             )), // TODO: may mark it as an unrecoverable error.
         }?;
-        Ok(MysqlTableEvent {
+        Ok(DataChangeEvent {
             table_name: tme.table_name().to_string(),
             table_id: tme.table_id(),
             changes,
         })
     }
 
-    fn handle_write_rows(
-        &self,
-        tme: &TableMapEvent,
-        e: WriteRowsEvent,
-    ) -> Result<Vec<MysqlChange>> {
+    fn handle_write_rows(&self, tme: &TableMapEvent, e: WriteRowsEvent) -> Result<Vec<RowChange>> {
         e.rows(tme)
             .map(|r| {
                 let row = r?;
@@ -276,17 +259,17 @@ impl MysqlEventHandler {
                     .1
                     .ok_or_else(|| anyhow!("'after' is missing in the UpdateRowsEvent"))?;
 
-                Ok(MysqlChange::Insert(after))
+                Ok(RowChange::Insert(after))
             })
-            .collect::<Result<Vec<MysqlChange>>>()
+            .collect::<Result<Vec<RowChange>>>()
     }
 
     fn handle_update_rows(
         &self,
         tme: &TableMapEvent,
         e: UpdateRowsEvent,
-    ) -> Result<Vec<MysqlChange>> {
-        let mut changes: Vec<MysqlChange> = vec![];
+    ) -> Result<Vec<RowChange>> {
+        let mut changes: Vec<RowChange> = vec![];
         for r in e.rows(tme) {
             let row = r?;
             let before = row
@@ -295,8 +278,8 @@ impl MysqlEventHandler {
             let after = row
                 .1
                 .ok_or_else(|| anyhow!("'after' is missing in the UpdateRowsEvent"))?;
-            changes.push(MysqlChange::Delete(before));
-            changes.push(MysqlChange::Insert(after));
+            changes.push(RowChange::Delete(before));
+            changes.push(RowChange::Insert(after));
         }
         Ok(changes)
     }
@@ -305,8 +288,8 @@ impl MysqlEventHandler {
         &self,
         tme: &TableMapEvent,
         e: DeleteRowsEvent,
-    ) -> Result<Vec<MysqlChange>> {
-        let mut changes: Vec<MysqlChange> = vec![];
+    ) -> Result<Vec<RowChange>> {
+        let mut changes: Vec<RowChange> = vec![];
         for r in e.rows(tme) {
             let row = r?;
             let before = row
@@ -315,26 +298,27 @@ impl MysqlEventHandler {
             if row.1.is_some() {
                 bail!("unexpected 'after' in the UpdateRowsEvent")
             }
-            changes.push(MysqlChange::Delete(before));
+            changes.push(RowChange::Delete(before));
         }
         Ok(changes)
     }
 }
 
-impl futures_core::stream::Stream for MysqlBinlogStream {
-    type Item = Result<MysqlTableEvent>;
+impl futures_core::stream::Stream for BinlogStream {
+    type Item = Result<ChgcapEvent>;
 
     fn poll_next(
         self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        let mut this = self.project();
+        let mut this = self.get_mut();
         // TODO: Support rate limiting.
         loop {
-            return match this.binlog_stream.as_mut().poll_next(cx) {
+            let binlog_stream = Pin::new(&mut this.binlog_stream);
+            return match binlog_stream.poll_next(cx) {
                 Poll::Ready(t) => match t {
                     Some(event_result) => match event_result {
-                        Ok(event) => match this.handler.handle_event(&this.binlog_stream, event) {
+                        Ok(event) => match this.handle_event(&this.binlog_stream, event) {
                             Ok(change) => match change {
                                 Some(c) => Poll::Ready(Some(Ok(c))),
                                 None => continue, // Skip this event.
