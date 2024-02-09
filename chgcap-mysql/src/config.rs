@@ -48,12 +48,8 @@ pub struct SourceConfig {
     #[builder(default)]
     connection_pool_size: i32,
 
-    // /// An optional list of regular expressions that match database names to be monitored; any
-    // /// database name not included in the whitelist will be excluded from monitoring. By default
-    // /// all databases will be monitored.
-    // #[getset(get = "pub")]
-    // database_list: Vec<String>,
-    /// TODO: We currently only support
+    /// The MySQL database to monitor.
+    #[getset(get = "pub")]
     #[builder(default)]
     database: String,
 

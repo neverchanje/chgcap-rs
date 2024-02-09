@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Result};
-use chgcap_mysql::{Source, MysqlSourceConfigBuilder, DataChangeEvent};
+use chgcap_mysql::{Event, Source, SourceConfigBuilder};
 use mysql_async::prelude::Query;
 use mysql_async::{Conn, Pool};
 use serde::Deserialize;
@@ -17,8 +17,8 @@ struct TableData {
     rows: Vec<String>,
 }
 
-async fn consume_cdc_events() -> Result<Vec<DataChangeEvent>> {
-    let cfg = MysqlSourceConfigBuilder::default()
+async fn consume_cdc_events() -> Result<Vec<Event>> {
+    let cfg = SourceConfigBuilder::default()
         .hostname("127.0.0.1".into())
         .port(3306)
         .username("root".into())
@@ -36,7 +36,7 @@ async fn consume_cdc_events() -> Result<Vec<DataChangeEvent>> {
         .timeout(Duration::from_secs(1));
     tokio::pin!(cdc_stream);
 
-    let mut events: Vec<DataChangeEvent> = vec![];
+    let mut events: Vec<Event> = vec![];
     while let Ok(Some(c)) = cdc_stream.try_next().await {
         events.push(c?);
     }
@@ -75,12 +75,12 @@ impl TestCase {
         // Tables may be created multiple times. We use the latest.
         let tables_id: HashMap<String, u64> = events
             .iter()
-            .map(|e| (e.table_name.clone(), e.table_id))
+            .map(|e| (e.table_name().clone(), e.table_id()))
             .collect();
 
         let mut table_events: HashMap<u64, Vec<String>> = HashMap::new();
         for e in events.iter() {
-            let evs = table_events.entry(e.table_id).or_default();
+            let evs = table_events.entry(e.table_id()).or_default();
             evs.extend(e.changes.iter().map(|ch| format!("{ch}")));
         }
         for (name, t) in self.tables.iter() {

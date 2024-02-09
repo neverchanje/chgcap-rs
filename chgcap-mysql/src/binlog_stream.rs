@@ -11,24 +11,42 @@ use mysql_async::binlog::events::{
 use mysql_async::prelude::Query;
 use mysql_async::{BinlogStream as MysqlBinlogStream, BinlogStreamRequest, Conn, Pool, Row};
 
-use crate::event::{DataChangeEvent, Event as ChgcapEvent};
+use crate::event::{Event as ChgcapEvent, EventData as ChgcapEventData, RowChange};
 use crate::source::{Source, SourceContext};
-use crate::{RowChange, SourceConfig};
+use crate::SourceConfig;
 
 pub struct BinlogStream {
     binlog_stream: MysqlBinlogStream,
 
     ctx: SourceContext,
+    cfg: SourceConfig,
 }
 
 impl BinlogStream {
     pub async fn new(source: &Source) -> Result<Self> {
-        let binlog_stream = get_binlog_stream(&source.pool, &source.cfg).await?;
-
+        let cfg = source.cfg.clone();
+        let pool = &source.pool;
+        let (conn, filename, position) = create_binlog_stream_conn(pool).await?;
+        let request = BinlogStreamRequest::new(cfg.server_id())
+            .with_filename(&filename)
+            .with_pos(position);
+        let binlog_stream = conn
+            .get_binlog_stream(request)
+            .await
+            .map_err(|e| anyhow!(e))?;
+        let ctx = SourceContext {
+            current_binlog_filename: String::from_utf8(filename)?,
+            ..Default::default()
+        };
         Ok(Self {
             binlog_stream,
-            ctx: SourceContext::default(),
+            ctx,
+            cfg,
         })
+    }
+
+    pub fn config(&self) -> &SourceConfig {
+        &self.cfg
     }
 }
 
@@ -60,17 +78,6 @@ async fn create_binlog_stream_conn(pool: &Pool) -> Result<(Conn, Vec<u8>, u64)> 
     Ok((conn, filename, position))
 }
 
-async fn get_binlog_stream(pool: &Pool, cfg: &SourceConfig) -> Result<MysqlBinlogStream> {
-    let (conn, filename, position) = create_binlog_stream_conn(pool).await?;
-
-    let request = BinlogStreamRequest::new(cfg.server_id())
-        .with_filename(&filename)
-        .with_pos(position);
-    conn.get_binlog_stream(request)
-        .await
-        .map_err(|e| anyhow!(e))
-}
-
 impl BinlogStream {
     /// Returns `Ok(None)` if the event is skipped.
     /// See [https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_replication_binlog_event.html] for the description of each event type.
@@ -89,7 +96,11 @@ impl BinlogStream {
             EventData::RowsQueryEvent(e) => self.handle_rows_query(e),
             EventData::GtidEvent(e) => self.handle_gtid_event(e),
             EventData::RowsEvent(e) => {
-                return Ok(Some(self.handle_rows_event(&self.binlog_stream, e)?.into()))
+                return Ok(Some(self.handle_rows_event(
+                    &self.binlog_stream,
+                    e,
+                    event.header().log_pos(),
+                )?))
             }
             EventData::TableMapEvent(_) => {
                 // [`BinlogStream`] has already handled this event. Internally, it maintains a table
@@ -220,7 +231,8 @@ impl BinlogStream {
         &self,
         stream: &MysqlBinlogStream,
         e: RowsEventData,
-    ) -> Result<DataChangeEvent> {
+        pos: u32,
+    ) -> Result<ChgcapEvent> {
         let tme = stream.get_tme(e.table_id()).ok_or_else(|| {
             anyhow!(
                 "Received a rows event for table id {} but no table metadata was found",
@@ -235,14 +247,19 @@ impl BinlogStream {
 
             RowsEventData::DeleteRowsEventV1(_)
             | RowsEventData::WriteRowsEventV1(_)
-            | RowsEventData::UpdateRowsEventV1(_) => Err(anyhow!(
-                "Received an unsupported V1 event, which is for mariadb and mysql 5.1.15-5.6.x."
-            )), // TODO: may mark it as an unrecoverable error.
+            | RowsEventData::UpdateRowsEventV1(_) => panic!(
+                "Received a V1 rows event, but V1 events are not supported. You are perhaps using an unsupported MySQL version (5.1.15-5.6.x)."
+            ),
         }?;
-        Ok(DataChangeEvent {
+
+        Ok(ChgcapEvent {
             table_name: tme.table_name().to_string(),
             table_id: tme.table_id(),
-            changes,
+            database_name: self.config().database().clone(),
+            schema_name: Default::default(),
+            sql: Default::default(),
+            pos,
+            data: ChgcapEventData::DataChange(changes),
         })
     }
 

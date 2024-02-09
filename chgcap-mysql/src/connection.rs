@@ -3,11 +3,6 @@ use std::collections::HashMap;
 use anyhow::Result;
 use mysql_async::Conn;
 
-pub struct BinlogPosition {
-    filename: String,
-    position: u64,
-}
-
 pub struct MysqlConn {
     conn: Conn,
 }

@@ -23,6 +23,6 @@ mod state;
 extern crate derive_builder;
 
 pub use binlog_stream::BinlogStream;
-pub use config::SourceConfig;
-pub use event::{DataChangeEvent, RowChange};
+pub use config::{SourceConfig, SourceConfigBuilder};
+pub use event::Event;
 pub use source::Source;

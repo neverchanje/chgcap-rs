@@ -77,29 +77,26 @@ impl std::fmt::Display for RowChange {
 }
 
 #[derive(Clone, PartialEq)]
-pub struct DataChangeEvent {
-    pub table_name: String,
-    pub table_id: u64,
-    pub changes: Vec<RowChange>,
+pub enum SchemaChange {
+    Create,
+    Alter,
+    Drop,
 }
 
 #[derive(Clone, PartialEq)]
-pub struct SchemaChangeEvent {}
+pub enum EventData {
+    DataChange(Vec<RowChange>),
+    SchemaChange(SchemaChange),
+}
 
 #[derive(Clone, PartialEq)]
-pub enum Event {
-    DataChange(DataChangeEvent),
-    SchemaChange(SchemaChangeEvent),
-}
+pub struct Event {
+    pub(crate) pos: u32,
+    pub(crate) database_name: String,
+    pub(crate) schema_name: String,
+    pub(crate) table_id: u64,
+    pub(crate) table_name: String,
+    pub(crate) sql: String,
 
-impl From<DataChangeEvent> for Event {
-    fn from(e: DataChangeEvent) -> Self {
-        Self::DataChange(e)
-    }
-}
-
-impl From<SchemaChangeEvent> for Event {
-    fn from(e: SchemaChangeEvent) -> Self {
-        Self::SchemaChange(e)
-    }
+    pub(crate) data: EventData,
 }
