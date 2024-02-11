@@ -68,6 +68,7 @@ pub struct SourceConfig {
 
     /// Password to use when connecting to the MySQL database server.
     #[getset(get = "pub")]
+    #[builder(default)]
     password: String,
 
     /// Integer port number of the MySQL database server.

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Result};
-use chgcap_mysql::{Event, Source, SourceConfigBuilder};
+use chgcap_mysql::{Event, EventData, Source, SourceConfigBuilder};
 use mysql_async::prelude::Query;
 use mysql_async::{Conn, Pool};
 use serde::Deserialize;
@@ -19,10 +19,9 @@ struct TableData {
 
 async fn consume_cdc_events() -> Result<Vec<Event>> {
     let cfg = SourceConfigBuilder::default()
-        .hostname("127.0.0.1".into())
+        .hostname("0.0.0.0".into())
         .port(3306)
         .username("root".into())
-        .password("123456".into())
         .database("mysql".into())
         .server_id(1)
         .build()
@@ -51,7 +50,7 @@ struct TestCase {
 
 impl TestCase {
     async fn new(path: impl Into<String>) -> Self {
-        let pool = mysql_async::Pool::new("mysql://root:123456@127.0.0.1:3306/mysql");
+        let pool = mysql_async::Pool::new("mysql://root@0.0.0.0:3306/mysql");
         let conn = pool.get_conn().await.unwrap();
 
         let tables: HashMap<String, TableData> =
@@ -81,7 +80,14 @@ impl TestCase {
         let mut table_events: HashMap<u64, Vec<String>> = HashMap::new();
         for e in events.iter() {
             let evs = table_events.entry(e.table_id()).or_default();
-            evs.extend(e.changes.iter().map(|ch| format!("{ch}")));
+            match e.data() {
+                EventData::DataChange(changes) => {
+                    evs.extend(changes.iter().map(|ch| format!("{ch}")));
+                }
+                EventData::SchemaChange(_) => {
+                    todo!()
+                }
+            }
         }
         for (name, t) in self.tables.iter() {
             let table_id = tables_id
@@ -125,8 +131,9 @@ async fn run_test(path: impl Into<String>) {
     TestCase::new(path).await.run().await;
 }
 
-// docker run --name mysql -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=123456 mysql/mysql-server:8.0
+// docker run --name mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -p 3306:3306 -d mysql:8.1 --gtid_mode=ON --enforce_gtid_consistency=ON
+// mysql -h 127.0.0.1 -P 3306 -u root -D mysql
 #[tokio::test]
 async fn test_cdc() {
-    run_test("./tests/testdata/testdata.yaml").await
+    run_test("./tests/testdata/testdata.yaml").await;
 }

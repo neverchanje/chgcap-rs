@@ -1,3 +1,4 @@
+use getset::{CopyGetters, Getters};
 use itertools::Itertools;
 use mysql_async::binlog::row::BinlogRow;
 use mysql_async::binlog::value::BinlogValue;
@@ -89,14 +90,26 @@ pub enum EventData {
     SchemaChange(SchemaChange),
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Getters, CopyGetters)]
 pub struct Event {
+    #[getset(get_copy = "pub")]
     pub(crate) pos: u32,
+
+    #[getset(get = "pub")]
     pub(crate) database_name: String,
+
+    #[getset(get = "pub")]
     pub(crate) schema_name: String,
+
+    #[getset(get_copy = "pub")]
     pub(crate) table_id: u64,
+
+    #[getset(get = "pub")]
     pub(crate) table_name: String,
+
+    #[getset(get = "pub")]
     pub(crate) sql: String,
 
+    #[getset(get = "pub")]
     pub(crate) data: EventData,
 }

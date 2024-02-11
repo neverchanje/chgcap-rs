@@ -106,7 +106,7 @@ impl BinlogStream {
                 // [`BinlogStream`] has already handled this event. Internally, it maintains a table
                 // mapping from table ID to table name.
             }
-            EventData::XidEvent(_) => self.handle_txn_completion(),
+            EventData::XidEvent(e) => debug!("Received XID event: {:?}", e),
             EventData::TransactionPayloadEvent(e) => self.handle_txn_payload(e),
             _ => {
                 // EventData::UnknownEvent => todo!(),

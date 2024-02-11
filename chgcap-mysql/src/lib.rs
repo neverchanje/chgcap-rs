@@ -24,5 +24,5 @@ extern crate derive_builder;
 
 pub use binlog_stream::BinlogStream;
 pub use config::{SourceConfig, SourceConfigBuilder};
-pub use event::Event;
+pub use event::{Event, EventData};
 pub use source::Source;
