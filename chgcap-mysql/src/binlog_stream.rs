@@ -257,7 +257,6 @@ impl BinlogStream {
             table_id: tme.table_id(),
             database_name: self.config().database().clone(),
             schema_name: Default::default(),
-            sql: Default::default(),
             pos,
             data: ChgcapEventData::DataChange(changes),
         })

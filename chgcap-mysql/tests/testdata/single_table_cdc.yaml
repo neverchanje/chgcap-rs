@@ -1,0 +1,797 @@
+# From Debezium MySqlFloatIT.
+DBZ3865_2:
+  prepare: |
+    CREATE TABLE `DBZ3865_2` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `f1` FLOAT DEFAULT 5.6,
+    `f2` FLOAT(10, 2) DEFAULT NULL,
+    `f3` FLOAT(35, 5) DEFAULT NULL,
+    `f4_23` FLOAT(23) DEFAULT NULL,
+    `f4_24` FLOAT(24) DEFAULT NULL,
+    `f4_25` FLOAT(25) DEFAULT NULL,
+    `weight` FLOAT UNSIGNED DEFAULT '0',
+    PRIMARY KEY (`ID`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+
+    INSERT INTO DBZ3865_2(f1, f2, f3, f4_23, f4_24, f4_25, weight) VALUE (5.6, 5.61, 30.123456, 64.1, 64.1, 64.1, 64.1234);
+  rows: |
+    Insert(INT(Int(1)),FLOAT(Float(5.6)),FLOAT(Float(5.61)),FLOAT(Float(30.12346)),FLOAT(Float(64.1)),FLOAT(Float(64.1)),DOUBLE(Double(64.1)),FLOAT(Float(64.1234)))
+
+# From Debezium MySqlTinyIntIT
+DBZ1773:
+  prepare: |
+    CREATE TABLE `DBZ1773` (
+      id int not null primary key auto_increment,
+      ti TINYINT SIGNED,
+      ti1 TINYINT(1) SIGNED,
+      ti2 TINYINT(2),
+      b BOOLEAN
+    ) ENGINE=InnoDB AUTO_INCREMENT=10851 DEFAULT CHARSET=utf8;
+
+    INSERT INTO DBZ1773 VALUES (DEFAULT, 100, 5, 50, TRUE);
+  rows: |
+    Insert(INT(Int(10851)),TINYINT(Int(100)),TINYINT(Int(5)),TINYINT(Int(50)),TINYINT(Int(1)))
+
+# From Debezium MySqlTinyIntIT
+DBZ2085:
+  prepare: |
+    CREATE TABLE `DBZ2085` (
+      id int not null primary key auto_increment,
+      b BOOLEAN NOT NULL DEFAULT 0
+    ) ENGINE=InnoDB AUTO_INCREMENT=10851 DEFAULT CHARSET=utf8;
+
+    INSERT INTO DBZ2085 VALUES (DEFAULT, 1);
+  rows: |
+    Insert(INT(Int(10851)),TINYINT(Int(1)))
+
+# From Debezium MySqlTinyIntIT
+DBZ5236:
+  prepare: |
+    CREATE TABLE `DBZ5236` (
+      id int(11) not null primary key auto_increment,
+      ti1 tinyint(3) unsigned NOT NULL DEFAULT '0',
+      ti2 tinyint(1) unsigned NOT NULL DEFAULT '0',
+      ti3 tinyint(1) NOT NULL DEFAULT '1'
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+    INSERT INTO DBZ5236 VALUES (DEFAULT, 1, 1, 0);
+  rows: |
+    Insert(INT(Int(1)),TINYINT(Int(1)),TINYINT(Int(1)),TINYINT(Int(0)))
+
+# From Debezium MySqlDecimalIT
+DBZ730:
+  prepare: |
+    CREATE TABLE `DBZ730` (
+      id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+      A NUMERIC(3, 2) NOT NULL DEFAULT 1.23,
+      B DECIMAL(4, 3) NOT NULL DEFAULT 2.321,
+      C NUMERIC(7, 5) NULL DEFAULT '12.678',
+      D NUMERIC(7, 5) NULL DEFAULT '15.28',
+      E DECIMAL(65, 18) NULL DEFAULT '0.000000000000000000'
+    ) ENGINE=InnoDB AUTO_INCREMENT=15851 DEFAULT CHARSET=utf8;
+    INSERT INTO `DBZ730`(A, B, C, D)
+    VALUES (1.33, -2.111 , 3.444, NULL);
+  rows: |
+    Insert(INT(Int(15851)),NEWDECIMAL(Bytes("1.33")),NEWDECIMAL(Bytes("-2.111")),NEWDECIMAL(Bytes("3.44400")),NEWDECIMAL(Null),NEWDECIMAL(Bytes("0.000000..")))
+
+# From Debezium MySqlNumericColumnIT
+dbz_751_numeric_column_test:
+  prepare: |
+    CREATE TABLE dbz_751_numeric_column_test (
+          id INT AUTO_INCREMENT NOT NULL,
+          rating1 NUMERIC,
+          rating2 NUMERIC(8, 4),
+          rating3 NUMERIC(7),
+          rating4 NUMERIC(6, 0),
+          PRIMARY KEY (id)
+    ) DEFAULT CHARSET=utf8;
+
+    INSERT INTO dbz_751_numeric_column_test VALUES (default, 123, 123.4567, 234.5, 345.6);
+  rows: |
+    Insert(INT(Int(1)),NEWDECIMAL(Bytes("123")),NEWDECIMAL(Bytes("123.4567")),NEWDECIMAL(Bytes("235")),NEWDECIMAL(Bytes("346")))
+
+# From Debezium MySqlDateTimeInKeyIT
+dbz_1194_datetime_key_test:
+  prepare: |
+    SET sql_mode='';
+    CREATE TABLE dbz_1194_datetime_key_test (
+          id INT AUTO_INCREMENT NOT NULL,
+          dtval DATETIME NOT NULL,
+          dval DATE NOT NULL,
+          tval TIME NOT NULL,
+          PRIMARY KEY (id, dtval, dval, tval)
+    ) DEFAULT CHARSET=utf8;
+
+    INSERT INTO dbz_1194_datetime_key_test VALUES (default, '0000-00-00 00:00:00', '0000-00-00', '00:00:00');
+  rows: |
+    Insert(INT(Int(1)),DATETIME2(Date("'0000-00-00'")),NEWDATE(Date("'0000-00-00'")),TIME2(Time("'000:00:00'")))
+
+# From Debezium MySqlBinaryModeIT, which tests multiple output formats.
+# But chgcap is merely a thin layer for CDC, it doesn't do the format convertion. So here we only have one test.
+dbz_1814_binary_mode_test:
+  prepare: |
+    CREATE TABLE dbz_1814_binary_mode_test (
+          id INT AUTO_INCREMENT NOT NULL,
+          blob_col BLOB NOT NULL,
+          tinyblob_col TINYBLOB NOT NULL,
+          mediumblob_col MEDIUMBLOB NOT NULL,
+          longblob_col LONGBLOB NOT NULL,
+          binary_col BINARY(3) NOT NULL,
+          varbinary_col varbinary(20) NOT NULL,
+          PRIMARY KEY (id)
+    ) DEFAULT CHARSET=utf8;
+
+    INSERT INTO dbz_1814_binary_mode_test (
+        id,
+        blob_col,
+        tinyblob_col,
+        mediumblob_col,
+        longblob_col,
+        binary_col,
+        varbinary_col )
+    VALUES (
+        default,
+        X'010203',
+        X'010203',
+        X'010203',
+        X'010203',
+        X'010203',
+        X'010203' );
+  rows: |
+    Insert(INT(Int(1)),BLOB(Bytes("\u{1}\u{2}\u{3}")),BLOB(Bytes("\u{1}\u{2}\u{3}")),BLOB(Bytes("\u{1}\u{2}\u{3}")),BLOB(Bytes("\u{1}\u{2}\u{3}")),STRING(Bytes("\u{1}\u{2}\u{3}")),VARCHAR(Bytes("\u{1}\u{2}\u{3}")))
+
+# From Debezium MysqlDefaultValueIT
+UNSIGNED_TINYINT_TABLE:
+  prepare: |
+    CREATE TABLE UNSIGNED_TINYINT_TABLE (
+      A TINYINT UNSIGNED NULL DEFAULT 0,
+      B TINYINT UNSIGNED NULL DEFAULT '10',
+      C TINYINT UNSIGNED NULL,
+      D TINYINT UNSIGNED NOT NULL,
+      E TINYINT UNSIGNED NOT NULL DEFAULT 0,
+      F TINYINT UNSIGNED NOT NULL DEFAULT '0',
+      G TINYINT UNSIGNED NULL DEFAULT '100'
+    );
+    INSERT INTO UNSIGNED_TINYINT_TABLE VALUES (DEFAULT, DEFAULT, 0, 1, DEFAULT, DEFAULT, NULL);
+  rows: |
+    Insert(TINYINT(Int(0)),TINYINT(Int(10)),TINYINT(Int(0)),TINYINT(Int(1)),TINYINT(Int(0)),TINYINT(Int(0)),TINYINT(Null))
+
+# From Debezium MysqlDefaultValueIT
+UNSIGNED_SMALLINT_TABLE:
+  prepare: |
+    CREATE TABLE UNSIGNED_SMALLINT_TABLE (
+      A SMALLINT UNSIGNED NULL DEFAULT 0,
+      B SMALLINT UNSIGNED NULL DEFAULT '10',
+      C SMALLINT UNSIGNED NULL,
+      D SMALLINT UNSIGNED NOT NULL,
+      E SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+      F SMALLINT UNSIGNED NOT NULL DEFAULT '0',
+      G SMALLINT UNSIGNED NULL DEFAULT '100'
+    );
+    INSERT INTO UNSIGNED_SMALLINT_TABLE VALUES (1, 1, 1, 0, 1, 1, NULL);
+  rows: |
+    Insert(SMALLINT(Int(1)),SMALLINT(Int(1)),SMALLINT(Int(1)),SMALLINT(Int(0)),SMALLINT(Int(1)),SMALLINT(Int(1)),SMALLINT(Null))
+
+# From Debezium MysqlDefaultValueIT
+UNSIGNED_MEDIUMINT_TABLE:
+  prepare: |
+    CREATE TABLE UNSIGNED_MEDIUMINT_TABLE (
+      A MEDIUMINT UNSIGNED NULL DEFAULT 0,
+      B MEDIUMINT UNSIGNED NULL DEFAULT '10',
+      C MEDIUMINT UNSIGNED NULL,
+      D MEDIUMINT UNSIGNED NOT NULL,
+      E MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
+      F MEDIUMINT UNSIGNED NOT NULL DEFAULT '0',
+      G MEDIUMINT UNSIGNED NULL DEFAULT '100'
+    );
+    INSERT INTO UNSIGNED_MEDIUMINT_TABLE VALUES (1, 1, 1, 0, 1, 1, NULL);
+  rows: |
+    Insert(MEDIUMINT(Int(1)),MEDIUMINT(Int(1)),MEDIUMINT(Int(1)),MEDIUMINT(Int(0)),MEDIUMINT(Int(1)),MEDIUMINT(Int(1)),MEDIUMINT(Null))
+
+# From Debezium MysqlDefaultValueIT
+UNSIGNED_INT_TABLE:
+  prepare: |
+    CREATE TABLE UNSIGNED_INT_TABLE (
+      A INT UNSIGNED NULL DEFAULT 0,
+      B INT UNSIGNED NULL DEFAULT '10',
+      C INT UNSIGNED NULL,
+      D INT UNSIGNED NOT NULL,
+      E INT UNSIGNED NOT NULL DEFAULT 0,
+      F INT UNSIGNED NOT NULL DEFAULT '0',
+      G INT UNSIGNED NULL DEFAULT '100'
+    );
+    INSERT INTO UNSIGNED_INT_TABLE VALUES (1, 1, 1, 0, 1, 1, NULL);
+  rows: |
+    Insert(INT(Int(1)),INT(Int(1)),INT(Int(1)),INT(Int(0)),INT(Int(1)),INT(Int(1)),INT(Null))
+
+# From Debezium MysqlDefaultValueIT
+UNSIGNED_BIGINT_TABLE:
+  prepare: |
+    CREATE TABLE UNSIGNED_BIGINT_TABLE (
+      A BIGINT UNSIGNED NULL DEFAULT 0,
+      B BIGINT UNSIGNED NULL DEFAULT '10',
+      C BIGINT UNSIGNED NULL,
+      D BIGINT UNSIGNED NOT NULL,
+      E BIGINT UNSIGNED NOT NULL DEFAULT 0,
+      F BIGINT UNSIGNED NOT NULL DEFAULT '0',
+      G BIGINT UNSIGNED NULL DEFAULT '100'
+    );
+    INSERT INTO UNSIGNED_BIGINT_TABLE VALUES (1, 1, 1, 0, 1, 1, NULL);
+  rows: |
+    Insert(BIGINT(Int(1)),BIGINT(Int(1)),BIGINT(Int(1)),BIGINT(Int(0)),BIGINT(Int(1)),BIGINT(Int(1)),BIGINT(Null))
+
+# From Debezium MysqlDefaultValueIT
+STRING_TABLE:
+  prepare: |
+    CREATE TABLE STRING_TABLE (
+      A CHAR(1) NULL DEFAULT 'A',
+      B CHAR(1) NULL DEFAULT 'b',
+      C VARCHAR(10) NULL DEFAULT 'CC',
+      D NCHAR(10) NULL DEFAULT '10',
+      E NVARCHAR(10) NULL DEFAULT '0',
+      F CHAR(1) DEFAULT NULL,
+      G VARCHAR(10) DEFAULT NULL,
+      H NCHAR(10) DEFAULT NULL,
+      I VARCHAR(10) NULL DEFAULT '100'
+    );
+    INSERT INTO STRING_TABLE
+    VALUES (DEFAULT ,DEFAULT ,DEFAULT ,DEFAULT ,DEFAULT ,DEFAULT ,DEFAULT ,DEFAULT, NULL);
+  rows: |
+    Insert(STRING(Bytes("A")),STRING(Bytes("b")),VARCHAR(Bytes("CC")),STRING(Bytes("10")),VARCHAR(Bytes("0")),STRING(Null),VARCHAR(Null),STRING(Null),VARCHAR(Null))
+
+# From Debezium MysqlDefaultValueIT
+BIT_TABLE:
+  prepare: |
+    CREATE TABLE BIT_TABLE (
+      A BIT(1) NULL DEFAULT NULL,
+      B BIT(1) DEFAULT 0,
+      C BIT(1) DEFAULT 1,
+      D BIT(1) DEFAULT b'0',
+      E BIT(1) DEFAULT b'1',
+      F BIT(1) DEFAULT TRUE,
+      G BIT(1) DEFAULT FALSE,
+      H BIT(10) DEFAULT b'101000010',
+      I BIT(10) DEFAULT NULL,
+      J BIT(25) DEFAULT b'10110000100001111',
+      K BIT(25) DEFAULT b'10110000100001111'
+    );
+    INSERT INTO BIT_TABLE
+    VALUES (false ,DEFAULT ,DEFAULT ,DEFAULT ,DEFAULT ,DEFAULT ,DEFAULT, DEFAULT ,NULL ,DEFAULT, NULL);
+  rows: |
+    Insert(BIT(Bytes("\0")),BIT(Bytes("\0")),BIT(Bytes("\u{1}")),BIT(Bytes("\0")),BIT(Bytes("\u{1}")),BIT(Bytes("\u{1}")),BIT(Bytes("\0")),BIT(Bytes("\u{1}B")),BIT(Null),BIT(Bytes("\0\u{1}a\u{f}")),BIT(Null))
+
+# From Debezium MysqlDefaultValueIT
+BOOLEAN_TABLE:
+  prepare: |
+    CREATE TABLE BOOLEAN_TABLE (
+      A BOOL NULL DEFAULT 0,
+      B BOOLEAN NOT NULL DEFAULT '1',
+      C BOOLEAN NOT NULL DEFAULT '1',
+      D BOOLEAN NOT NULL DEFAULT TRUE,
+      E BOOLEAN DEFAULT NULL,
+      F BOOLEAN DEFAULT TRUE
+    );
+    INSERT INTO BOOLEAN_TABLE
+    VALUES (TRUE ,TRUE ,TRUE ,DEFAULT ,TRUE, NULL);
+  rows: |
+    Insert(TINYINT(Int(1)),TINYINT(Int(1)),TINYINT(Int(1)),TINYINT(Int(1)),TINYINT(Int(1)),TINYINT(Null))
+
+# From Debezium MysqlDefaultValueIT
+NUMBER_TABLE:
+  prepare: |
+    CREATE TABLE NUMBER_TABLE (
+      A TINYINT NULL DEFAULT 10,
+      B SMALLINT NOT NULL DEFAULT '5',
+      C INTEGER NOT NULL DEFAULT 0,
+      D BIGINT NOT NULL DEFAULT 20,
+      E INT NULL DEFAULT NULL,
+      F INT NULL DEFAULT 30,
+      G TINYINT(1) NOT NULL DEFAULT TRUE,
+      H INT(1) NOT NULL DEFAULT TRUE
+    );
+    INSERT INTO NUMBER_TABLE
+    VALUES (DEFAULT ,DEFAULT ,DEFAULT ,DEFAULT ,DEFAULT, NULL, DEFAULT, DEFAULT);
+  rows: |
+    Insert(TINYINT(Int(10)),SMALLINT(Int(5)),INT(Int(0)),BIGINT(Int(20)),INT(Null),INT(Null),TINYINT(Int(1)),INT(Int(1)))
+
+# From Debezium MysqlDefaultValueIT
+FLOAT_DOUBLE_TABLE:
+  prepare: |
+    CREATE TABLE FLOAT_DOUBLE_TABLE (
+      F FLOAT NULL DEFAULT 0,
+      G DOUBLE NOT NULL DEFAULT 1.0,
+      H DOUBLE NULL DEFAULT 3.0
+    );
+    INSERT INTO FLOAT_DOUBLE_TABLE
+    VALUES (DEFAULT, DEFAULT, NULL);
+  rows: |
+    Insert(FLOAT(Float(0.0)),DOUBLE(Double(1.0)),DOUBLE(Null))
+
+# From Debezium MysqlDefaultValueIT. REAL is an alias to DOUBLE.
+REAL_TABLE:
+  prepare: |
+    CREATE TABLE REAL_TABLE (
+      A REAL NOT NULL DEFAULT 1,
+      B REAL NULL DEFAULT NULL,
+      C REAL NULL DEFAULT 3
+    );
+    INSERT INTO REAL_TABLE
+    VALUES (DEFAULT ,DEFAULT, NULL);
+  rows: |
+    Insert(DOUBLE(Double(1.0)),DOUBLE(Null),DOUBLE(Null))
+
+# From Debezium MysqlDefaultValueIT
+NUMERIC_DECIMAL_TABLE:
+  prepare: |
+    CREATE TABLE NUMERIC_DECIMAL_TABLE (
+      A NUMERIC(3, 2) NOT NULL DEFAULT 1.23,
+      B DECIMAL(4, 3) NOT NULL DEFAULT 2.321,
+      C NUMERIC(7, 5) NULL DEFAULT '12.678',
+      D NUMERIC(7, 5) NULL DEFAULT '15.28'
+    );
+    INSERT INTO NUMERIC_DECIMAL_TABLE
+    VALUES (1.33 ,2.111 , 3.444, NULL);
+  rows: |
+    Insert(NEWDECIMAL(Bytes("1.33")),NEWDECIMAL(Bytes("2.111")),NEWDECIMAL(Bytes("3.44400")),NEWDECIMAL(Null))
+
+# From Debezium MysqlDefaultValueIT. mysql_common fails to parse negative timestamps.
+# DATE_TIME_TABLE:
+#   prepare: |
+#     CREATE TABLE DATE_TIME_TABLE (
+#       A DATE NOT NULL DEFAULT '1976-08-23',
+#       B TIMESTAMP DEFAULT '1970-01-01 00:00:01',
+#       C DATETIME DEFAULT '2018-01-03 00:00:10',
+#       D DATETIME(1) DEFAULT '2018-01-03 00:00:10.7',
+#       E DATETIME(6) DEFAULT '2018-01-03 00:00:10.123456',
+#       F YEAR NOT NULL DEFAULT 1,
+#       G TIME DEFAULT '00:00:00',
+#       H TIME(1) DEFAULT '23:00:00.7',
+#       I TIME(6) DEFAULT '23:00:00.123456',
+#       J TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+#       K TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+#       L TIME(1) DEFAULT '-23:45:56.7',
+#       M TIME(6) DEFAULT '123:00:00.123456'
+#     );
+#     INSERT INTO DATE_TIME_TABLE
+#     VALUES (DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, NULL, DEFAULT, DEFAULT);
+#   rows:
+#     -
+
+# From Debezium MysqlDefaultValueIT
+DBZ_771_CUSTOMERS:
+  prepare: |
+    CREATE TABLE DBZ_771_CUSTOMERS (
+      id INTEGER NOT NULL PRIMARY KEY,
+      CUSTOMER_TYPE ENUM ('b2c','b2b') NOT NULL default 'b2c'
+    );
+    INSERT INTO DBZ_771_CUSTOMERS
+    VALUES (1, 'b2b');
+  rows: |
+    Insert(INT(Int(1)),ENUM(Int(2)))
+
+# From Debezium MysqlDefaultGeneratedValueIT
+GENERATED_TABLE:
+  prepare: |
+    CREATE TABLE GENERATED_TABLE (
+      A SMALLINT UNSIGNED,
+      B SMALLINT UNSIGNED AS (2 * A),
+      C SMALLINT UNSIGNED AS (3 * A) NOT NULL
+    );
+    INSERT INTO GENERATED_TABLE VALUES (15, DEFAULT, DEFAULT);
+  rows: |
+    Insert(SMALLINT(Int(15)),SMALLINT(Int(30)),SMALLINT(Int(45)))
+
+# From Debezium MySqlUnsignedIntegerIT
+dbz_228_tinyint_unsigned:
+  prepare: |
+    CREATE TABLE dbz_228_tinyint_unsigned (
+      id int auto_increment NOT NULL,
+      c1 TINYINT(3) UNSIGNED ZEROFILL NOT NULL,
+      c2 TINYINT(3) UNSIGNED NOT NULL,
+      c3 TINYINT(3) NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_228_tinyint_unsigned VALUES (default, 255, 255, 127);
+    INSERT INTO dbz_228_tinyint_unsigned VALUES (default, 155, 155, -100);
+    INSERT INTO dbz_228_tinyint_unsigned VALUES (default, 0, 0, -128);
+  rows: |
+    Insert(INT(Int(1)),TINYINT(Int(255)),TINYINT(Int(255)),TINYINT(Int(127)))
+    Insert(INT(Int(2)),TINYINT(Int(155)),TINYINT(Int(155)),TINYINT(Int(-100)))
+    Insert(INT(Int(3)),TINYINT(Int(0)),TINYINT(Int(0)),TINYINT(Int(-128)))
+
+# From Debezium MySqlUnsignedIntegerIT
+dbz_228_smallint_unsigned:
+  prepare: |
+    CREATE TABLE dbz_228_smallint_unsigned (
+      id int auto_increment NOT NULL,
+      c1 SMALLINT UNSIGNED ZEROFILL NOT NULL,
+      c2 SMALLINT UNSIGNED NOT NULL,
+      c3 SMALLINT NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_228_smallint_unsigned VALUES (default, 65535, 65535, 32767);
+    INSERT INTO dbz_228_smallint_unsigned VALUES (default, 45535, 45535, -12767);
+    INSERT INTO dbz_228_smallint_unsigned VALUES (default, 0, 0, -32768);
+  rows: |
+    Insert(INT(Int(1)),SMALLINT(Int(65535)),SMALLINT(Int(65535)),SMALLINT(Int(32767)))
+    Insert(INT(Int(2)),SMALLINT(Int(45535)),SMALLINT(Int(45535)),SMALLINT(Int(-12767)))
+    Insert(INT(Int(3)),SMALLINT(Int(0)),SMALLINT(Int(0)),SMALLINT(Int(-32768)))
+
+# From Debezium MySqlUnsignedIntegerIT
+dbz_228_mediumint_unsigned:
+  prepare: |
+    CREATE TABLE dbz_228_mediumint_unsigned (
+      id int auto_increment NOT NULL,
+      c1 MEDIUMINT UNSIGNED ZEROFILL NOT NULL,
+      c2 MEDIUMINT UNSIGNED NOT NULL,
+      c3 MEDIUMINT NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_228_mediumint_unsigned VALUES (default, 16777215, 16777215, 8388607);
+    INSERT INTO dbz_228_mediumint_unsigned VALUES (default, 10777215, 10777215, -6388607);
+    INSERT INTO dbz_228_mediumint_unsigned VALUES (default, 0, 0, -8388608);
+  rows: |
+    Insert(INT(Int(1)),MEDIUMINT(Int(16777215)),MEDIUMINT(Int(16777215)),MEDIUMINT(Int(8388607)))
+    Insert(INT(Int(2)),MEDIUMINT(Int(10777215)),MEDIUMINT(Int(10777215)),MEDIUMINT(Int(10388609)))
+    Insert(INT(Int(3)),MEDIUMINT(Int(0)),MEDIUMINT(Int(0)),MEDIUMINT(Int(8388608)))
+
+# From Debezium MySqlUnsignedIntegerIT
+dbz_228_int_unsigned:
+  prepare: |
+    CREATE TABLE dbz_228_int_unsigned (
+      id int auto_increment NOT NULL,
+      c1 int(11) UNSIGNED ZEROFILL NOT NULL,
+      c2 int(11) UNSIGNED NOT NULL,
+      c3 int(11) NOT NULL,
+      c4 int(5) UNSIGNED ZEROFILL NOT NULL,
+      c5 int(5) UNSIGNED NOT NULL ,
+      c6 int(5) NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_228_int_unsigned VALUES (default, 4294967295, 4294967295, 2147483647, 4294967295, 4294967295, 2147483647);
+    INSERT INTO dbz_228_int_unsigned VALUES (default, 3294967295, 3294967295, -1147483647, 3294967295, 3294967295, -1147483647);
+    INSERT INTO dbz_228_int_unsigned VALUES (default, 0, 0, -2147483648, 0, 0, -2147483648);
+  rows: |
+    Insert(INT(Int(1)),INT(Int(4294967295)),INT(Int(4294967295)),INT(Int(2147483647)),INT(Int(4294967295)),INT(Int(4294967295)),INT(Int(2147483647)))
+    Insert(INT(Int(2)),INT(Int(3294967295)),INT(Int(3294967295)),INT(Int(-1147483647)),INT(Int(3294967295)),INT(Int(3294967295)),INT(Int(-1147483647)))
+    Insert(INT(Int(3)),INT(Int(0)),INT(Int(0)),INT(Int(-2147483648)),INT(Int(0)),INT(Int(0)),INT(Int(-2147483648)))
+
+# From Debezium MySqlUnsignedIntegerIT
+dbz_228_bigint_unsigned:
+  prepare: |
+    CREATE TABLE dbz_228_bigint_unsigned (
+      id int auto_increment NOT NULL,
+      c1 BIGINT UNSIGNED ZEROFILL NOT NULL,
+      c2 BIGINT UNSIGNED NOT NULL,
+      c3 BIGINT NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_228_bigint_unsigned VALUES (default, 18446744073709551615, 18446744073709551615, 9223372036854775807);
+    INSERT INTO dbz_228_bigint_unsigned VALUES (default, 14446744073709551615, 14446744073709551615, -1223372036854775807);
+    INSERT INTO dbz_228_bigint_unsigned VALUES (default, 0, 0, -9223372036854775808);
+  rows: |
+    Insert(INT(Int(1)),BIGINT(UInt(18446744073709551615)),BIGINT(UInt(18446744073709551615)),BIGINT(Int(9223372036854775807)))
+    Insert(INT(Int(2)),BIGINT(UInt(14446744073709551615)),BIGINT(UInt(14446744073709551615)),BIGINT(Int(-1223372036854775807)))
+    Insert(INT(Int(3)),BIGINT(Int(0)),BIGINT(Int(0)),BIGINT(Int(-9223372036854775808)))
+
+# From Debezium MySqlUnsignedIntegerIT
+dbz_1185_serial:
+  prepare: |
+    CREATE TABLE dbz_1185_serial (
+      id SERIAL NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_1185_serial VALUES (10);
+    INSERT INTO dbz_1185_serial VALUES (default);
+    INSERT INTO dbz_1185_serial VALUES (18446744073709551615);
+  rows: |
+    Insert(BIGINT(Int(10)))
+    Insert(BIGINT(Int(11)))
+    Insert(BIGINT(UInt(18446744073709551615)))
+
+# From Debezium MySqlUnsignedIntegerIT
+dbz_1185_serial_default_value:
+  prepare: |
+    CREATE TABLE dbz_1185_serial_default_value (
+      id SMALLINT UNSIGNED SERIAL DEFAULT VALUE NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_1185_serial_default_value VALUES (10);
+    INSERT INTO dbz_1185_serial_default_value VALUES (default);
+    INSERT INTO dbz_1185_serial_default_value VALUES (1000);
+  rows: |
+    Insert(SMALLINT(Int(10)))
+    Insert(SMALLINT(Int(11)))
+    Insert(SMALLINT(Int(1000)))
+
+# From Debezium MySqlTimestampColumnIT
+t_user_black_list:
+  prepare: |
+    CREATE TABLE t_user_black_list (
+        `id` int(10) unsigned NOT NULL,
+        `data` varchar(20),
+        `create_time` datetime,
+        `update_time` datetime,
+        PRIMARY KEY (`id`)
+    );
+    ALTER TABLE t_user_black_list
+        MODIFY COLUMN `update_time` datetime(0) NOT NULL
+            DEFAULT '2023-03-12 12:30:19' COMMENT 'update_time' AFTER create_time;
+    INSERT INTO t_user_black_list (`id`,`create_time`,`update_time`,`data`) VALUES (1, '2023-03-12 12:25:27', '2023-03-12 12:25:27', 'test');
+    UPDATE t_user_black_list SET `data` = 'test2' WHERE `id` = 1;
+  rows: |
+    Insert(INT(Int(1)),VARCHAR(Bytes("test")),DATETIME2(Date("'2023-03-12 12:25:27'")),DATETIME2(Date("'2023-03-12 12:25:27'")))
+    Delete(INT(Int(1)),VARCHAR(Bytes("test")),DATETIME2(Date("'2023-03-12 12:25:27'")),DATETIME2(Date("'2023-03-12 12:25:27'")))
+    Insert(INT(Int(1)),VARCHAR(Bytes("test2")),DATETIME2(Date("'2023-03-12 12:25:27'")),DATETIME2(Date("'2023-03-12 12:25:27'")))
+
+# From Debezium ReadBinLogIT
+person:
+  prepare: |
+    DROP TABLE IF EXISTS person;
+    CREATE TABLE person (
+      name VARCHAR(255) primary key,
+      age INTEGER NULL DEFAULT 10
+    );
+    INSERT INTO person(name,age) VALUES ('Georgia',30);
+    UPDATE person SET name = 'Maggie' WHERE name = 'Georgia';
+    DELETE FROM person WHERE name = 'Maggie';
+    INSERT INTO person(name,age) VALUES ('Georgia',30);
+    INSERT INTO person(name,age) VALUES ('Janice',19);
+    UPDATE person SET name = 'Maggie' WHERE name = 'Georgia';
+    UPDATE person SET name = 'Jamie' WHERE name = 'Janice';
+    DELETE FROM person WHERE name = 'Maggie';
+    DELETE FROM person WHERE name = 'Jamie';
+    INSERT INTO person(name,age) VALUES ('Georgia',30),('Janice',19);
+    UPDATE person SET name =
+      CASE 
+      WHEN name = 'Georgia' THEN 'Maggie'
+      WHEN name = 'Janice' THEN 'Jamie'
+      END
+    WHERE name IN ('Georgia','Janice');
+    DELETE FROM person WHERE name IN ('Maggie','Jamie');
+  rows: |
+    Insert(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    Delete(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    Insert(VARCHAR(Bytes("Maggie")),INT(Int(30)))
+    Delete(VARCHAR(Bytes("Maggie")),INT(Int(30)))
+    Insert(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    Insert(VARCHAR(Bytes("Janice")),INT(Int(19)))
+    Delete(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    Insert(VARCHAR(Bytes("Maggie")),INT(Int(30)))
+    Delete(VARCHAR(Bytes("Janice")),INT(Int(19)))
+    Insert(VARCHAR(Bytes("Jamie")),INT(Int(19)))
+    Delete(VARCHAR(Bytes("Maggie")),INT(Int(30)))
+    Delete(VARCHAR(Bytes("Jamie")),INT(Int(19)))
+    Insert(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    Insert(VARCHAR(Bytes("Janice")),INT(Int(19)))
+    Delete(VARCHAR(Bytes("Georgia")),INT(Int(30)))
+    Insert(VARCHAR(Bytes("Maggie")),INT(Int(30)))
+    Delete(VARCHAR(Bytes("Janice")),INT(Int(19)))
+    Insert(VARCHAR(Bytes("Jamie")),INT(Int(19)))
+    Delete(VARCHAR(Bytes("Jamie")),INT(Int(19)))
+    Delete(VARCHAR(Bytes("Maggie")),INT(Int(30)))
+
+# From Debezium MySqlYearIT DBZ-1143
+dbz_1143_year_test:
+  prepare: |
+    CREATE TABLE dbz_1143_year_test (
+          id INT AUTO_INCREMENT NOT NULL,
+          y18 YEAR,
+          y0018 YEAR,
+          y2018 YEAR,
+          d18 DATE,
+          d0018 DATE,
+          d2018 DATE,
+          dt18 DATETIME,
+          dt0018 DATETIME,
+          dt2018 DATETIME,
+          y78 YEAR,
+          y0078 YEAR,
+          y1978 YEAR,
+          d78 DATE,
+          d0078 DATE,
+          d1978 DATE,
+          dt78 DATETIME,
+          dt0078 DATETIME,
+          dt1978 DATETIME,
+        PRIMARY KEY (id)
+    ) DEFAULT CHARSET=utf8;
+
+    INSERT INTO dbz_1143_year_test VALUES (
+        default,
+        '18',
+        '0018',
+        '2018',
+        '18-04-01',
+        '0018-04-01',
+        '2018-04-01',
+        '18-04-01 12:34:56',
+        '0018-04-01 12:34:56',
+        '2018-04-01 12:34:56',
+        '78',
+        '0078',
+        '1978',
+        '78-04-01',
+        '0078-04-01',
+        '1978-04-01',
+        '78-04-01 12:34:56',
+        '0078-04-01 12:34:56',
+        '1978-04-01 12:34:56'
+    );
+  rows: |
+    Insert(INT(Int(1)),YEAR(Bytes("2018")),YEAR(Bytes("2018")),YEAR(Bytes("2018")),NEWDATE(Date("'2018-04-01'")),NEWDATE(Date("'0018-04-01'")),NEWDATE(Date("'2018-04-01'")),DATETIME2(Date("'2018-04-01 12:34:56'")),DATETIME2(Date("'0018-04-01 12:34:56'")),DATETIME2(Date("'2018-04-01 12:34:56'")),YEAR(Bytes("1978")),YEAR(Bytes("1978")),YEAR(Bytes("1978")),NEWDATE(Date("'1978-04-01'")),NEWDATE(Date("'0078-04-01'")),NEWDATE(Date("'1978-04-01'")),DATETIME2(Date("'1978-04-01 12:34:56'")),DATETIME2(Date("'0078-04-01 12:34:56'")),DATETIME2(Date("'1978-04-01 12:34:56'")))
+
+dbz_126_jsontable:
+  prepare: |
+    CREATE TABLE dbz_126_jsontable (
+      id INT AUTO_INCREMENT NOT NULL,
+      json JSON,
+      expectedJdbcStr VARCHAR(256), -- value that we get back from JDBC
+      expectedBinlogStr VARCHAR(256), -- value we parse from the binlog
+      PRIMARY KEY(id)
+    ) DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_126_jsontable VALUES (default,NULL,
+                                                  NULL,
+                                                  NULL);
+    INSERT INTO dbz_126_jsontable VALUES (default,'{"a": 2}',
+                                                  '{"a": 2}',
+                                                  '{"a":2}');
+    INSERT INTO dbz_126_jsontable VALUES (default,'[1, 2]',
+                                                  '[1, 2]',
+                                                  '[1,2]');
+    INSERT INTO dbz_126_jsontable VALUES (default,'{"key1": "value1", "key2": "value2"}',
+                                                  '{"key1": "value1", "key2": "value2"}',
+                                                  '{"key1":"value1","key2":"value2"}');
+    INSERT INTO dbz_126_jsontable VALUES (default,'["a", "b",1]',
+                                                  '["a", "b",1]',
+                                                  '["a","b",1]');
+    INSERT INTO dbz_126_jsontable VALUES (default,'{"k1": "v1", "k2": {"k21": "v21", "k22": "v22"}, "k3": ["a", "b", 1]}',
+                                                  '{"k1": "v1", "k2": {"k21": "v21", "k22": "v22"}, "k3": ["a", "b", 1]}',
+                                                  '{"k1":"v1","k2":{"k21":"v21","k22":"v22"},"k3":["a","b",1]}');
+    INSERT INTO dbz_126_jsontable VALUES (default,'{"a": "b", "c": "d", "ab": "abc", "bc": ["x", "y"]}',
+                                                  '{"a": "b", "c": "d", "ab": "abc", "bc": ["x", "y"]}',
+                                                  '{"a":"b","c":"d","ab":"abc","bc":["x","y"]}');
+    INSERT INTO dbz_126_jsontable VALUES (default,'["here", ["I", "am"], "!!!"]',
+                                                  '["here", ["I", "am"], "!!!"]',
+                                                  '["here",["I","am"],"!!!"]');
+    INSERT INTO dbz_126_jsontable VALUES (default,'"scalar string"',
+                                                  '"scalar string"',
+                                                  '"scalar string"');
+    INSERT INTO dbz_126_jsontable VALUES (default,'true',
+                                                  'true',
+                                                  'true');
+    INSERT INTO dbz_126_jsontable VALUES (default,'false',
+                                                  'false',
+                                                  'false');
+    INSERT INTO dbz_126_jsontable VALUES (default,'null',
+                                                  'null',
+                                                  'null');
+    INSERT INTO dbz_126_jsontable VALUES (default,'-1',
+                                                  '-1',
+                                                  '-1');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(CAST(1 AS UNSIGNED) AS JSON),
+                                                  '1',
+                                                  '1');
+    INSERT INTO dbz_126_jsontable VALUES (default,'32767',
+                                                  '32767',
+                                                  '32767');
+    INSERT INTO dbz_126_jsontable VALUES (default,'32768',
+                                                  '32768',
+                                                  '32768');
+    INSERT INTO dbz_126_jsontable VALUES (default,'-32768',
+                                                  '-32768',
+                                                  '-32768');
+    INSERT INTO dbz_126_jsontable VALUES (default,'2147483647', -- INT32
+                                                  '2147483647',
+                                                  '2147483647');
+    INSERT INTO dbz_126_jsontable VALUES (default,'2147483648', -- INT64
+                                                  '2147483648',
+                                                  '2147483648');
+    INSERT INTO dbz_126_jsontable VALUES (default,'-2147483648', -- INT32
+                                                  '-2147483648',
+                                                  '-2147483648');
+    INSERT INTO dbz_126_jsontable VALUES (default,'-2147483649', -- INT64
+                                                  '-2147483649',
+                                                  '-2147483649');
+    INSERT INTO dbz_126_jsontable VALUES (default,'18446744073709551615', -- INT64
+                                                  '18446744073709551615',
+                                                  '18446744073709551615');
+    INSERT INTO dbz_126_jsontable VALUES (default,'18446744073709551616', -- BigInteger
+                                                  '18446744073709551616',
+                                                  '18446744073709551616');
+    INSERT INTO dbz_126_jsontable VALUES (default,'3.14',
+                                                  '3.14',
+                                                  '3.14');
+    INSERT INTO dbz_126_jsontable VALUES (default,'{}',
+                                                  '{}',
+                                                  '{}');
+    INSERT INTO dbz_126_jsontable VALUES (default,'[]',
+                                                  '[]',
+                                                  '[]');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(CAST('2015-01-15 23:24:25' AS DATETIME) AS JSON),
+                                                  '"2015-01-15 23:24:25"',
+                                                  '"2015-01-15 23:24:25"');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(CAST('2015-01-15 23:24:25.12' AS DATETIME(3)) AS JSON),
+                                                  '"2015-01-15 23:24:25.12"',
+                                                  '"2015-01-15 23:24:25.12"');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(CAST('2015-01-15 23:24:25.0237' AS DATETIME(3)) AS JSON),
+                                                  '"2015-01-15 23:24:25.024"',
+                                                  '"2015-01-15 23:24:25.024"');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(CAST('23:24:25' AS TIME) AS JSON),
+                                                  '"23:24:25"',
+                                                  '"23:24:25"');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(CAST('23:24:25.12' AS TIME(3)) AS JSON),
+                                                  '"23:24:25.12"',
+                                                  '"23:24:25.12"');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(CAST('23:24:25.0237' AS TIME(3)) AS JSON),
+                                                  '"23:24:25.024"',
+                                                  '"23:24:25.024"');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(CAST('2015-01-15' AS DATE) AS JSON),
+                                                  '"2015-01-15"',
+                                                  '"2015-01-15"');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(TIMESTAMP'2015-01-15 23:24:25' AS JSON),
+                                                  '"2015-01-15 23:24:25"',
+                                                  '"2015-01-15 23:24:25"');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(TIMESTAMP'2015-01-15 23:24:25.12' AS JSON),
+                                                  '"2015-01-15 23:24:25.12"',
+                                                  '"2015-01-15 23:24:25.12"');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(TIMESTAMP'2015-01-15 23:24:25.0237' AS JSON),
+                                                  '"2015-01-15 23:24:25.0237"',
+                                                  '"2015-01-15 23:24:25.0237"');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(UNIX_TIMESTAMP('2015-01-15 23:24:25') AS JSON),
+                                                  '1421364265',
+                                                  '1421364265');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(ST_GeomFromText('POINT(1 1)') AS JSON),
+                                                  '{\"type\": \"Point\", \"coordinates\": [1.0, 1.0]}',
+                                                  '{\"type\":\"Point\",\"coordinates\":[1.0,1.0]}');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST('[]' AS CHAR CHARACTER SET 'ascii'),
+                                                  '[]',
+                                                  '[]');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(x'cafe' AS JSON), -- BLOB as Base64
+                                                  '"yv4="',
+                                                  '"yv4="');
+    INSERT INTO dbz_126_jsontable VALUES (default,CAST(x'cafebabe' AS JSON), -- BLOB as Base64
+                                                  '"yv66vg=="',
+                                                  '"yv66vg=="');
+  rows: |
+    Insert(INT(Int(1)),JSON(Null),VARCHAR(Null),VARCHAR(Null))
+    Insert(INT(Int(2)),JSON({"a":2}),VARCHAR(Bytes("{\"a\": 2}")),VARCHAR(Bytes("{\"a\":2}")))
+    Insert(INT(Int(3)),JSON([1,2]),VARCHAR(Bytes("[1, 2]")),VARCHAR(Bytes("[1,2]")))
+    Insert(INT(Int(4)),JSON({"key1":"value1","key2":"value2"}),VARCHAR(Bytes("{\"key1\":..")),VARCHAR(Bytes("{\"key1\":..")))
+    Insert(INT(Int(5)),JSON(["a","b",1]),VARCHAR(Bytes("[\"a\", \"b..")),VARCHAR(Bytes("[\"a\",\"b\"..")))
+    Insert(INT(Int(6)),JSON({"k1":"v1","k2":{"k21":"v21","k22":"v22"},"k3":["a","b",1]}),VARCHAR(Bytes("{\"k1\": \"..")),VARCHAR(Bytes("{\"k1\":\"v..")))
+    Insert(INT(Int(7)),JSON({"a":"b","ab":"abc","bc":["x","y"],"c":"d"}),VARCHAR(Bytes("{\"a\": \"b..")),VARCHAR(Bytes("{\"a\":\"b\"..")))
+    Insert(INT(Int(8)),JSON(["here",["I","am"],"!!!"]),VARCHAR(Bytes("[\"here\",..")),VARCHAR(Bytes("[\"here\",..")))
+    Insert(INT(Int(9)),JSON("scalar string"),VARCHAR(Bytes("\"scalar ..")),VARCHAR(Bytes("\"scalar ..")))
+    Insert(INT(Int(10)),JSON(true),VARCHAR(Bytes("true")),VARCHAR(Bytes("true")))
+    Insert(INT(Int(11)),JSON(false),VARCHAR(Bytes("false")),VARCHAR(Bytes("false")))
+    Insert(INT(Int(12)),JSON(null),VARCHAR(Bytes("null")),VARCHAR(Bytes("null")))
+    Insert(INT(Int(13)),JSON(-1),VARCHAR(Bytes("-1")),VARCHAR(Bytes("-1")))
+    Insert(INT(Int(14)),JSON(1),VARCHAR(Bytes("1")),VARCHAR(Bytes("1")))
+    Insert(INT(Int(15)),JSON(32767),VARCHAR(Bytes("32767")),VARCHAR(Bytes("32767")))
+    Insert(INT(Int(16)),JSON(32768),VARCHAR(Bytes("32768")),VARCHAR(Bytes("32768")))
+    Insert(INT(Int(17)),JSON(-32768),VARCHAR(Bytes("-32768")),VARCHAR(Bytes("-32768")))
+    Insert(INT(Int(18)),JSON(2147483647),VARCHAR(Bytes("21474836..")),VARCHAR(Bytes("21474836..")))
+    Insert(INT(Int(19)),JSON(2147483648),VARCHAR(Bytes("21474836..")),VARCHAR(Bytes("21474836..")))
+    Insert(INT(Int(20)),JSON(-2147483648),VARCHAR(Bytes("-2147483..")),VARCHAR(Bytes("-2147483..")))
+    Insert(INT(Int(21)),JSON(-2147483649),VARCHAR(Bytes("-2147483..")),VARCHAR(Bytes("-2147483..")))
+    Insert(INT(Int(22)),JSON(18446744073709551615),VARCHAR(Bytes("18446744..")),VARCHAR(Bytes("18446744..")))
+    Insert(INT(Int(23)),JSON(1.8446744073709552e19),VARCHAR(Bytes("18446744..")),VARCHAR(Bytes("18446744..")))
+    Insert(INT(Int(24)),JSON(3.14),VARCHAR(Bytes("3.14")),VARCHAR(Bytes("3.14")))
+    Insert(INT(Int(25)),JSON({}),VARCHAR(Bytes("{}")),VARCHAR(Bytes("{}")))
+    Insert(INT(Int(26)),JSON([]),VARCHAR(Bytes("[]")),VARCHAR(Bytes("[]")))
+    Insert(INT(Int(27)),JSON({"DATETIME":"\u0000\u0000\u0000\u0019v\u001f�\u0019"}),VARCHAR(Bytes("\"2015-01..")),VARCHAR(Bytes("\"2015-01..")))
+    Insert(INT(Int(28)),JSON({"DATETIME":"��\u0001\u0019v\u001f�\u0019"}),VARCHAR(Bytes("\"2015-01..")),VARCHAR(Bytes("\"2015-01..")))
+    Insert(INT(Int(29)),JSON({"DATETIME":"�]\u0000\u0019v\u001f�\u0019"}),VARCHAR(Bytes("\"2015-01..")),VARCHAR(Bytes("\"2015-01..")))
+    Insert(INT(Int(30)),JSON({"TIME":"\u0000\u0000\u0000\u0019v\u0001\u0000\u0000"}),VARCHAR(Bytes("\"23:24:2..")),VARCHAR(Bytes("\"23:24:2..")))
+    Insert(INT(Int(31)),JSON({"TIME":"��\u0001\u0019v\u0001\u0000\u0000"}),VARCHAR(Bytes("\"23:24:2..")),VARCHAR(Bytes("\"23:24:2..")))
+    Insert(INT(Int(32)),JSON({"TIME":"�]\u0000\u0019v\u0001\u0000\u0000"}),VARCHAR(Bytes("\"23:24:2..")),VARCHAR(Bytes("\"23:24:2..")))
+    Insert(INT(Int(33)),JSON({"DATE":"\u0000\u0000\u0000\u0000\u0000\u001e�\u0019"}),VARCHAR(Bytes("\"2015-01..")),VARCHAR(Bytes("\"2015-01..")))
+    Insert(INT(Int(34)),JSON({"DATETIME":"\u0000\u0000\u0000\u0019v\u001f�\u0019"}),VARCHAR(Bytes("\"2015-01..")),VARCHAR(Bytes("\"2015-01..")))
+    Insert(INT(Int(35)),JSON({"DATETIME":"��\u0001\u0019v\u001f�\u0019"}),VARCHAR(Bytes("\"2015-01..")),VARCHAR(Bytes("\"2015-01..")))
+    Insert(INT(Int(36)),JSON({"DATETIME":"�\\\u0000\u0019v\u001f�\u0019"}),VARCHAR(Bytes("\"2015-01..")),VARCHAR(Bytes("\"2015-01..")))
+    Insert(INT(Int(37)),JSON(1421364265),VARCHAR(Bytes("14213642..")),VARCHAR(Bytes("14213642..")))
+    Insert(INT(Int(38)),JSON({"coordinates":[1.0,1.0],"type":"Point"}),VARCHAR(Bytes("{\"type\":..")),VARCHAR(Bytes("{\"type\":..")))
+    Insert(INT(Int(39)),JSON([]),VARCHAR(Bytes("[]")),VARCHAR(Bytes("[]")))
+    Insert(INT(Int(40)),JSON({"VARCHAR":"��"}),VARCHAR(Bytes("\"yv4=\"")),VARCHAR(Bytes("\"yv4=\"")))
+    Insert(INT(Int(41)),JSON({"VARCHAR":"����"}),VARCHAR(Bytes("\"yv66vg=..")),VARCHAR(Bytes("\"yv66vg=..")))

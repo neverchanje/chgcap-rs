@@ -1,26 +1,32 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use chgcap_mysql::{Event, EventData, Source, SourceConfigBuilder};
+use chgcap_mysql_test_utils::mysql_container::Mysql;
 use mysql_async::prelude::Query;
 use mysql_async::{Conn, Pool};
 use serde::Deserialize;
+use testcontainers::clients::Cli;
+use testcontainers::Container;
 use tokio::time::sleep;
 use tokio_stream::StreamExt;
 
-mod util;
+lazy_static::lazy_static! {
+    pub static ref DOCKER: Cli = Cli::default();
+    pub static ref MYSQL_CONTAINER: Container<'static, Mysql> = DOCKER.run(Mysql::default());
+}
 
 #[derive(Deserialize, PartialEq, Debug)]
 struct TableData {
     prepare: String,
-    rows: Vec<String>,
+    rows: String,
 }
 
 async fn consume_cdc_events() -> Result<Vec<Event>> {
     let cfg = SourceConfigBuilder::default()
         .hostname("0.0.0.0".into())
-        .port(3306)
+        .port(MYSQL_CONTAINER.get_host_port_ipv4(3306))
         .username("root".into())
         .database("mysql".into())
         .server_id(1)
@@ -50,7 +56,13 @@ struct TestCase {
 
 impl TestCase {
     async fn new(path: impl Into<String>) -> Self {
-        let pool = mysql_async::Pool::new("mysql://root@0.0.0.0:3306/mysql");
+        let pool = mysql_async::Pool::new(
+            format!(
+                "mysql://root@0.0.0.0:{}/mysql",
+                MYSQL_CONTAINER.get_host_port_ipv4(3306)
+            )
+            .as_str(),
+        );
         let conn = pool.get_conn().await.unwrap();
 
         let tables: HashMap<String, TableData> =
@@ -96,13 +108,8 @@ impl TestCase {
             let evs = table_events
                 .get(table_id)
                 .ok_or_else(|| anyhow!("No event for table {name}."))?;
-            if evs.len() != t.rows.len() {
-                bail!("Events count received ({}) for table '{name}'(id: {table_id}) mismatches with the expected ({}). Received:\n{evs:?}", evs.len(), t.rows.len());
-            }
-            for (i, row) in t.rows.iter().enumerate() {
-                let ev = evs.get(i).unwrap();
-                ensure_eq!(ev, row);
-            }
+
+            assert_cdc_rows_eq(&t.rows, evs);
         }
 
         Ok(())
@@ -127,6 +134,14 @@ impl TestCase {
     }
 }
 
+fn assert_cdc_rows_eq(expected: &str, actual: &[String]) {
+    let expected = expected.trim().to_string();
+    let actual = actual.join("\n").trim().to_string();
+    if expected != actual {
+        panic!("Rows mismatched.\nExpected:\n{expected}\nActual:\n{actual}")
+    }
+}
+
 async fn run_test(path: impl Into<String>) {
     TestCase::new(path).await.run().await;
 }
@@ -134,6 +149,6 @@ async fn run_test(path: impl Into<String>) {
 // docker run --name mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -p 3306:3306 -d mysql:8.1 --gtid_mode=ON --enforce_gtid_consistency=ON
 // mysql -h 127.0.0.1 -P 3306 -u root -D mysql
 #[tokio::test]
-async fn test_cdc() {
-    run_test("./tests/testdata/testdata.yaml").await;
+async fn test_single_table_cdc() {
+    run_test("./tests/testdata/single_table_cdc.yaml").await;
 }

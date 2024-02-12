@@ -1,8 +1,10 @@
 use getset::{CopyGetters, Getters};
 use itertools::Itertools;
+use mysql_async::binlog::jsonb::{self, Array, Object, StorageFormat};
 use mysql_async::binlog::row::BinlogRow;
 use mysql_async::binlog::value::BinlogValue;
 use mysql_async::consts::ColumnType;
+use serde_json::Value;
 
 #[derive(Clone, PartialEq)]
 pub enum RowChange {
@@ -54,7 +56,7 @@ fn fmt_value(val: &BinlogValue, ty: &ColumnType) -> String {
         BinlogValue::Value(v) => {
             format!("{}({:?})", fmt_column_type(ty), v)
         }
-        BinlogValue::Jsonb(_) => todo!(),
+        BinlogValue::Jsonb(v) => format!("JSON({})", fmt_jsonb(v)),
         BinlogValue::JsonDiff(_) => todo!(),
     }
 }
@@ -66,6 +68,47 @@ fn fmt_row(row: &BinlogRow) -> String {
             None => "NULL".to_string(),
         })
         .join(",")
+}
+
+fn fmt_jsonb(v: &jsonb::Value) -> String {
+    to_serde_json(v).to_string()
+}
+
+fn to_serde_json(v: &jsonb::Value) -> serde_json::Value {
+    match v {
+        jsonb::Value::Null => Value::Null,
+        jsonb::Value::Bool(v) => (*v).into(),
+        jsonb::Value::I16(v) => (*v).into(),
+        jsonb::Value::U16(v) => (*v).into(),
+        jsonb::Value::I32(v) => (*v).into(),
+        jsonb::Value::U32(v) => (*v).into(),
+        jsonb::Value::I64(v) => (*v).into(),
+        jsonb::Value::U64(v) => (*v).into(),
+        jsonb::Value::F64(v) => (*v).into(),
+        jsonb::Value::String(v) => serde_json::Value::String(v.str().to_string()),
+        jsonb::Value::SmallArray(v) => to_serde_json_array(v),
+        jsonb::Value::LargeArray(v) => to_serde_json_array(v),
+        jsonb::Value::SmallObject(v) => to_serde_json_object(v),
+        jsonb::Value::LargeObject(v) => to_serde_json_object(v),
+        jsonb::Value::Opaque(v) => serde_json::Value::from_iter(
+            [(fmt_column_type(&v.value_type()), v.data().to_string())].into_iter(),
+        ),
+    }
+}
+
+fn to_serde_json_array<'a, T: StorageFormat>(
+    v: &jsonb::ComplexValue<'a, T, Array>,
+) -> serde_json::Value {
+    serde_json::Value::from_iter(v.iter().map(|e| to_serde_json(&e.unwrap())))
+}
+
+fn to_serde_json_object<'a, T: StorageFormat>(
+    v: &jsonb::ComplexValue<'a, T, Object>,
+) -> serde_json::Value {
+    serde_json::Value::from_iter(v.iter().map(|e| {
+        let (key, val) = e.unwrap();
+        (key.value().to_string(), to_serde_json(&val))
+    }))
 }
 
 impl std::fmt::Display for RowChange {
@@ -106,9 +149,6 @@ pub struct Event {
 
     #[getset(get = "pub")]
     pub(crate) table_name: String,
-
-    #[getset(get = "pub")]
-    pub(crate) sql: String,
 
     #[getset(get = "pub")]
     pub(crate) data: EventData,

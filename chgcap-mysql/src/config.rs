@@ -73,7 +73,7 @@ pub struct SourceConfig {
 
     /// Integer port number of the MySQL database server.
     #[getset(get_copy = "pub")]
-    port: i32,
+    port: u16,
 
     /// Whether the [`MySqlSource`] should output the schema changes or not.
     #[getset(get_copy = "pub")]

@@ -14,11 +14,14 @@ itertools = "0.12"
 log = "0.4"
 mysql_async = { version = "0.33", features = ["binlog"] }
 tokio-stream = "0.1"
+serde_json = "1"
 
 [dev-dependencies]
 env_logger = "0.11"
-lazy_static = "1"
 serde = "1"
 serde_yaml = "0.9"
 tokio = { version = "1", features = ["rt", "macros"] }
 tokio-stream = { version = "0.1", features = ["time"] }
+testcontainers = "0.15.0"
+chgcap-mysql-test-utils = { path = "./test-utils" }
+lazy_static = "1"
