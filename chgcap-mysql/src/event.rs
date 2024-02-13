@@ -54,7 +54,7 @@ fn fmt_column_type(c: &ColumnType) -> String {
 fn fmt_value(val: &BinlogValue, ty: &ColumnType) -> String {
     match val {
         BinlogValue::Value(v) => {
-            format!("{}({:?})", fmt_column_type(ty), v)
+            format!("{}({})", fmt_column_type(ty), v.as_sql(true))
         }
         BinlogValue::Jsonb(v) => format!("JSON({})", fmt_jsonb(v)),
         BinlogValue::JsonDiff(_) => todo!(),
@@ -90,21 +90,17 @@ fn to_serde_json(v: &jsonb::Value) -> serde_json::Value {
         jsonb::Value::LargeArray(v) => to_serde_json_array(v),
         jsonb::Value::SmallObject(v) => to_serde_json_object(v),
         jsonb::Value::LargeObject(v) => to_serde_json_object(v),
-        jsonb::Value::Opaque(v) => serde_json::Value::from_iter(
-            [(fmt_column_type(&v.value_type()), v.data().to_string())].into_iter(),
-        ),
+        jsonb::Value::Opaque(v) => {
+            serde_json::Value::from_iter([(fmt_column_type(&v.value_type()), v.data().to_string())])
+        }
     }
 }
 
-fn to_serde_json_array<'a, T: StorageFormat>(
-    v: &jsonb::ComplexValue<'a, T, Array>,
-) -> serde_json::Value {
+fn to_serde_json_array<T: StorageFormat>(v: &jsonb::ComplexValue<T, Array>) -> serde_json::Value {
     serde_json::Value::from_iter(v.iter().map(|e| to_serde_json(&e.unwrap())))
 }
 
-fn to_serde_json_object<'a, T: StorageFormat>(
-    v: &jsonb::ComplexValue<'a, T, Object>,
-) -> serde_json::Value {
+fn to_serde_json_object<T: StorageFormat>(v: &jsonb::ComplexValue<T, Object>) -> serde_json::Value {
     serde_json::Value::from_iter(v.iter().map(|e| {
         let (key, val) = e.unwrap();
         (key.value().to_string(), to_serde_json(&val))

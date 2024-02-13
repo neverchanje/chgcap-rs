@@ -319,6 +319,7 @@ dependencies = [
  "futures",
  "futures-core",
  "getset",
+ "indexmap 2.2.2",
  "itertools",
  "lazy_static",
  "log",
@@ -995,6 +996,7 @@ checksum = "824b2ae422412366ba479e8111fd301f7b5faece8149317bb81925979a53f520"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.3",
+ "serde",
 ]
 
 [[package]]

@@ -25,3 +25,4 @@ tokio-stream = { version = "0.1", features = ["time"] }
 testcontainers = "0.15.0"
 chgcap-mysql-test-utils = { path = "./test-utils" }
 lazy_static = "1"
+indexmap = { version = "2", features = ["serde"] }
