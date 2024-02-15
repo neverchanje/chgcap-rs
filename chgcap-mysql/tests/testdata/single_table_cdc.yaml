@@ -546,6 +546,7 @@ dbz_1143_year_test:
     );
   rows: Insert(INT(1),YEAR('2018'),YEAR('2018'),YEAR('2018'),NEWDATE('2018-04-01'),NEWDATE('0018-04-01'),NEWDATE('2018-04-01'),DATETIME2('2018-04-01 12:34:56'),DATETIME2('0018-04-01 12:34:56'),DATETIME2('2018-04-01 12:34:56'),YEAR('1978'),YEAR('1978'),YEAR('1978'),NEWDATE('1978-04-01'),NEWDATE('0078-04-01'),NEWDATE('1978-04-01'),DATETIME2('1978-04-01 12:34:56'),DATETIME2('0078-04-01 12:34:56'),DATETIME2('1978-04-01 12:34:56'))
 dbz_126_jsontable:
+  comment: From Debezium MySqlConnectorJsonIT
   prepare: |
     CREATE TABLE dbz_126_jsontable (
       id INT AUTO_INCREMENT NOT NULL,
@@ -719,3 +720,42 @@ dbz_126_jsontable:
     Insert(INT(39),JSON([]),VARCHAR('[]'),VARCHAR('[]'))
     Insert(INT(40),JSON({"VARCHAR":"��"}),VARCHAR('"yv4="'),VARCHAR('"yv4="'))
     Insert(INT(41),JSON({"VARCHAR":"����"}),VARCHAR('"yv66vg=="'),VARCHAR('"yv66vg=="'))
+dbz_4605_jsontable:
+  comment: From Debezium MySqlConnectorJsonIT
+  prepare: |-
+    CREATE TABLE IF NOT EXISTS dbz_4605_jsontable (
+      id int(11) unsigned NOT NULL AUTO_INCREMENT,
+      company_id int(11) unsigned DEFAULT NULL,
+      title varchar(255) DEFAULT NULL,
+      custom_fields json DEFAULT NULL,
+      PRIMARY KEY (id),
+      KEY idx_company_id (company_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    INSERT INTO dbz_4605_jsontable (title, custom_fields) VALUES ('test', '{
+      "17fc9889474028063990914001f6854f6b8b5784": "test_field_for_remove_fields_behaviour_2",
+      "1f3a2ea5bc1f60258df20521bee9ac636df69a3a": {"currency": "USD"},
+      "4f4d99a438f334d7dbf83a1816015b361b848b3b": {"currency": "USD"},
+      "9021162291be72f5a8025480f44bf44d5d81d07c": "test_field_for_remove_fields_behaviour_3_will_be_removed",
+      "9b0ed11532efea688fdf12b28f142b9eb08a80c5": {"currency": "USD"},
+      "e65ad0762c259b05b4866f7249eabecabadbe577": "test_field_for_remove_fields_behaviour_1_updated",
+      "ff2c07edcaa3e987c23fb5cc4fe860bb52becf00": {"currency": "USD"}
+    }');
+    UPDATE dbz_4605_jsontable SET custom_fields = JSON_REMOVE(custom_fields, '$."17fc9889474028063990914001f6854f6b8b5784"');
+  rows: |-
+    Insert(INT(1),INT(NULL),VARCHAR('test'),JSON({"17fc9889474028063990914001f6854f6b8b5784":"test_field_for_remove_fields_behaviour_2","1f3a2ea5bc1f60258df20521bee9ac636df69a3a":{"currency":"USD"},"4f4d99a438f334d7dbf83a1816015b361b848b3b":{"currency":"USD"},"9021162291be72f5a8025480f44bf44d5d81d07c":"test_field_for_remove_fields_behaviour_3_will_be_removed","9b0ed11532efea688fdf12b28f142b9eb08a80c5":{"currency":"USD"},"e65ad0762c259b05b4866f7249eabecabadbe577":"test_field_for_remove_fields_behaviour_1_updated","ff2c07edcaa3e987c23fb5cc4fe860bb52becf00":{"currency":"USD"}}))
+    Delete(INT(1),INT(NULL),VARCHAR('test'),JSON({"17fc9889474028063990914001f6854f6b8b5784":"test_field_for_remove_fields_behaviour_2","1f3a2ea5bc1f60258df20521bee9ac636df69a3a":{"currency":"USD"},"4f4d99a438f334d7dbf83a1816015b361b848b3b":{"currency":"USD"},"9021162291be72f5a8025480f44bf44d5d81d07c":"test_field_for_remove_fields_behaviour_3_will_be_removed","9b0ed11532efea688fdf12b28f142b9eb08a80c5":{"currency":"USD"},"e65ad0762c259b05b4866f7249eabecabadbe577":"test_field_for_remove_fields_behaviour_1_updated","ff2c07edcaa3e987c23fb5cc4fe860bb52becf00":{"currency":"USD"}}))
+    Insert(INT(1),INT(NULL),VARCHAR('test'),JSON({"1f3a2ea5bc1f60258df20521bee9ac636df69a3a":{"currency":"USD"},"4f4d99a438f334d7dbf83a1816015b361b848b3b":{"currency":"USD"},"9021162291be72f5a8025480f44bf44d5d81d07c":"test_field_for_remove_fields_behaviour_3_will_be_removed","9b0ed11532efea688fdf12b28f142b9eb08a80c5":{"currency":"USD"},"e65ad0762c259b05b4866f7249eabecabadbe577":"test_field_for_remove_fields_behaviour_1_updated","ff2c07edcaa3e987c23fb5cc4fe860bb52becf00":{"currency":"USD"}}))
+dbz_751_decimal_column_test:
+  comment: From Debezium MySqlDecimalColumnIT
+  prepare: |-
+    CREATE TABLE dbz_751_decimal_column_test (
+      id INT AUTO_INCREMENT NOT NULL,
+      rating1 DECIMAL,
+      rating2 DECIMAL(8, 4),
+      rating3 DECIMAL(7),
+      rating4 DECIMAL(6, 0),
+      PRIMARY KEY (id)
+    ) DEFAULT CHARSET=utf8;
+
+    INSERT INTO dbz_751_decimal_column_test VALUES (default, 123, 123.4567, 234.5, 345.6);
+  rows: Insert(INT(1),NEWDECIMAL('123'),NEWDECIMAL('123.4567'),NEWDECIMAL('235'),NEWDECIMAL('346'))

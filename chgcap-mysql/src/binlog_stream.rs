@@ -2,11 +2,11 @@ use std::pin::Pin;
 use std::task::Poll;
 
 use anyhow::{anyhow, bail, Result};
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use mysql_async::binlog::events::{
     DeleteRowsEvent, Event, EventData, GtidEvent, IncidentEvent, QueryEvent, RotateEvent,
-    RowsEventData, RowsQueryEvent, TableMapEvent, TransactionPayloadEvent, UpdateRowsEvent,
-    WriteRowsEvent,
+    RowsEventData, RowsQueryEvent, StatusVarVal, TableMapEvent, TransactionPayloadEvent,
+    UpdateRowsEvent, WriteRowsEvent,
 };
 use mysql_async::prelude::Query;
 use mysql_async::{BinlogStream as MysqlBinlogStream, BinlogStreamRequest, Conn, Pool, Row};
@@ -50,20 +50,8 @@ impl BinlogStream {
     }
 }
 
-/// Ensures that the MySQL server has GTIDs enabled.
-async fn check_gtid_mode_enabled(conn: &mut Conn) -> Result<()> {
-    let opt_gtid_mode = "SELECT @@GLOBAL.GTID_MODE".first::<String, _>(conn).await?;
-    if let Some(gtid_mode) = opt_gtid_mode {
-        if gtid_mode.starts_with("ON") {
-            return Ok(());
-        }
-    }
-    bail!("GTID_MODE is disabled (enable using --gtid_mode=ON --enforce_gtid_consistency=ON)");
-}
-
 async fn create_binlog_stream_conn(pool: &Pool) -> Result<(Conn, Vec<u8>, u64)> {
     let mut conn = pool.get_conn().await.unwrap();
-    check_gtid_mode_enabled(&mut conn).await?;
 
     if conn.server_version() >= (8, 0, 31) && conn.server_version() < (9, 0, 0) {
         let _ = "SET binlog_transaction_compression=ON"
@@ -90,10 +78,10 @@ impl BinlogStream {
         self.ctx.server_id = event.header().server_id();
 
         match event_data {
-            EventData::QueryEvent(e) => self.handle_query(e),
-            EventData::RotateEvent(e) => self.handle_rotate(e),
-            EventData::HeartbeatEvent => self.handle_server_heartbeat(),
-            EventData::RowsQueryEvent(e) => self.handle_rows_query(e),
+            EventData::QueryEvent(e) => self.handle_query_event(e),
+            EventData::RotateEvent(e) => self.handle_rotate_event(e),
+            EventData::HeartbeatEvent => self.handle_heartbeat_event(),
+            EventData::RowsQueryEvent(e) => self.handle_rows_query_event(e),
             EventData::GtidEvent(e) => self.handle_gtid_event(e),
             EventData::RowsEvent(e) => {
                 return Ok(Some(self.handle_rows_event(
@@ -102,9 +90,17 @@ impl BinlogStream {
                     event.header().log_pos(),
                 )?))
             }
-            EventData::TableMapEvent(_) => {
-                // [`BinlogStream`] has already handled this event. Internally, it maintains a table
-                // mapping from table ID to table name.
+            EventData::TableMapEvent(e) => {
+                // An event that contains the schema data for a DML statement, enabled only in row-based mode.
+                // It precedes every DML,
+                debug!(
+                    "{}.{} {:?}",
+                    e.database_name(),
+                    e.table_name(),
+                    (0..e.columns_count())
+                        .map(|i| e.get_column_type(i as usize).map_err(|e| anyhow!(e)))
+                        .collect::<Result<Vec<_>>>()
+                );
             }
             EventData::XidEvent(e) => debug!("Received XID event: {:?}", e),
             EventData::TransactionPayloadEvent(e) => self.handle_txn_payload(e),
@@ -156,7 +152,7 @@ impl BinlogStream {
 
     /// Handle the supplied event that is sent by a primary to a replica to let the replica
     /// know that the primary is still alive. Not written to a binary log.
-    fn handle_server_heartbeat(&self) {
+    fn handle_heartbeat_event(&self) {
         debug!("server heartbeat")
     }
 
@@ -171,7 +167,7 @@ impl BinlogStream {
     /// Handle the supplied event that signals the logs are being rotated. This means that either
     /// the server was restarted, or the binlog has transitioned to a new file.
     /// In either case, subsequent table numbers will be different than those seen to this point.
-    fn handle_rotate(&mut self, e: RotateEvent) {
+    fn handle_rotate_event(&mut self, e: RotateEvent) {
         self.ctx.current_binlog_pos = e.position();
         self.ctx.current_binlog_filename = e.name().to_string();
 
@@ -194,35 +190,24 @@ impl BinlogStream {
 
     /// Handle the supplied event [RowsQueryEvent] by recording the original SQL query that
     /// generated the event.
-    fn handle_rows_query(&mut self, e: RowsQueryEvent) {
+    fn handle_rows_query_event(&mut self, e: RowsQueryEvent) {
         self.ctx.current_query = e.query().to_string();
     }
 
     /// Handle the supplied event with an [QueryEvent] by possibly recording the DDL statements
     /// as changes in the MySQL schemas.
-    fn handle_query(&mut self, e: QueryEvent) {
-        debug!("Received query command: {:?}", e);
-
-        let query = e.query().to_string().trim().to_string();
-        if query.eq_ignore_ascii_case("BEGIN") {
-            self.ctx.thread_id = Some(e.thread_id());
-            return;
-        }
-        if query.eq_ignore_ascii_case("COMMIT") {
-            self.handle_txn_completion();
-            return;
-        }
-
-        let stmt_prefix = query[..7].to_uppercase();
-        if stmt_prefix.starts_with("XA ") {
-            info!("Ignore XA transaction");
-            return;
-        } else if stmt_prefix == "INSERT " || stmt_prefix == "UPDATE " || stmt_prefix == "DELETE " {
-            warn!("Received DML '{}' for processing, binlog probably contains events generated with statement or mixed based replication format", query);
-            return;
-        }
-        if query.eq_ignore_ascii_case("ROLLBACK") {
-            unimplemented!("{}", query)
+    fn handle_query_event(&mut self, e: QueryEvent) {
+        // Obtain the database name of a DDL statement.
+        let db_name = e.status_vars().iter().find_map(|v| {
+            if let Ok(StatusVarVal::UpdatedDbNames(names)) = v.get_value() {
+                names.first().map(|n| n.as_str().to_string())
+            } else {
+                None
+            }
+        });
+        if let Some(name) = db_name {
+            info!("Received DDL for database {}: {}", name.as_str(), e.query());
+            // TODO: parse `create table` and `alter table` statements. https://github.com/neverchanje/chgcap-rs/issues/4
         }
     }
 
@@ -247,9 +232,9 @@ impl BinlogStream {
 
             RowsEventData::DeleteRowsEventV1(_)
             | RowsEventData::WriteRowsEventV1(_)
-            | RowsEventData::UpdateRowsEventV1(_) => panic!(
-                "Received a V1 rows event, but V1 events are not supported. You are perhaps using an unsupported MySQL version (5.1.15-5.6.x)."
-            ),
+            | RowsEventData::UpdateRowsEventV1(_) => {
+                panic!("Received a V1 rows event. V1 is used in MySQL version 5.1.15-5.6.x, which are unsupported.")
+            }
         }?;
 
         Ok(ChgcapEvent {

@@ -7,8 +7,6 @@ mod connection;
 #[allow(dead_code)]
 mod event;
 #[allow(dead_code)]
-mod gtid;
-#[allow(dead_code)]
 mod metrics;
 #[allow(dead_code)]
 mod schema;

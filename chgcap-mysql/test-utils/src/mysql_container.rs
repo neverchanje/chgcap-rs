@@ -49,8 +49,8 @@ impl ImageArgs for MysqlArgs {
     fn into_iterator(self) -> Box<dyn Iterator<Item = String>> {
         Box::new(
             vec![
-                "--gtid_mode=ON".to_string(),
-                "--enforce_gtid_consistency=ON".to_string(),
+                // "--gtid_mode=ON".to_string(),
+                // "--enforce_gtid_consistency=ON".to_string(),
             ]
             .into_iter(),
         )

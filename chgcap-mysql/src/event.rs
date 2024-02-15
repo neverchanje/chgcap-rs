@@ -62,9 +62,10 @@ fn fmt_value(val: &BinlogValue, ty: &ColumnType) -> String {
 }
 
 fn fmt_row(row: &BinlogRow) -> String {
+    let columns = row.columns_ref();
     (0..row.len())
         .map(|i| match row.as_ref(i) {
-            Some(v) => fmt_value(v, &row.columns_ref().get(i).unwrap().column_type()),
+            Some(v) => fmt_value(v, &columns[i].column_type()),
             None => "NULL".to_string(),
         })
         .join(",")

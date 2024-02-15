@@ -22,9 +22,10 @@ struct TableData {
     comment: Option<String>,
     prepare: String,
     rows: String,
+    ddls: Option<String>,
 }
 
-/// This function behaves as a user of the chgcap. It consumes and collects CDC events into a list.
+/// This function behaves as a user of the chgcap. It consumes and collects all CDC events into a list.
 async fn consume_cdc_events() -> Result<Vec<Event>> {
     let cfg = SourceConfigBuilder::default()
         .hostname("0.0.0.0".into())
@@ -55,7 +56,7 @@ struct TestCase {
     _pool: Pool,
     conn: Conn,
 
-    // Tables that preserve the order of insertion.
+    // `Indexmap` can preserve the order of insertion.
     tables: IndexMap<String, TableData>,
     table_events: IndexMap<String, Vec<String>>,
 }
