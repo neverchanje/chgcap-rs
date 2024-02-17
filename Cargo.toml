@@ -1,5 +1,10 @@
 [workspace]
-members = ["chgcap", "chgcap-mysql", "chgcap-mysql/test-utils"]
+members = [
+    "chgcap",
+    "chgcap-mysql",
+    "chgcap-mysql/test-utils",
+    "chgcap-mysql/ddl-parser",
+]
 
 [workspace.package]
 homepage = ""

@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1"
-derive_builder = "0.13"
+derive_builder = "0.20"
 futures = "0.3"
 futures-core = "0.3"
 getset = "0.1"

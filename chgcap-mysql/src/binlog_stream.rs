@@ -206,7 +206,7 @@ impl BinlogStream {
             }
         });
         if let Some(name) = db_name {
-            info!("Received DDL for database {}: {}", name.as_str(), e.query());
+            println!("Received DDL for database {}: {}", name.as_str(), e.query());
             // TODO: parse `create table` and `alter table` statements. https://github.com/neverchanje/chgcap-rs/issues/4
         }
     }

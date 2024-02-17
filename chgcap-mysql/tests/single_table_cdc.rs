@@ -1,4 +1,6 @@
+use env_logger::Target;
 use indexmap::IndexMap;
+use log::info;
 use std::time::Duration;
 
 use anyhow::{bail, Result};
@@ -15,6 +17,7 @@ use tokio_stream::StreamExt;
 lazy_static::lazy_static! {
     pub static ref DOCKER: Cli = Cli::default();
     pub static ref MYSQL_CONTAINER: Container<'static, Mysql> = DOCKER.run(Mysql::default());
+    pub static ref LOGGER: () = env_logger::builder().filter_level(log::LevelFilter::Info).target(Target::Stdout).init();
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
@@ -52,7 +55,7 @@ async fn consume_cdc_events() -> Result<Vec<Event>> {
 }
 
 /// The template structure of `single_table_cdc.yaml`.
-struct TestCase {
+struct TestSuite {
     _pool: Pool,
     conn: Conn,
 
@@ -61,8 +64,8 @@ struct TestCase {
     table_events: IndexMap<String, Vec<String>>,
 }
 
-impl TestCase {
-    async fn new(path: impl Into<String>) -> Self {
+impl TestSuite {
+    async fn load(path: impl Into<String>) -> Self {
         let pool = mysql_async::Pool::new(
             format!(
                 "mysql://root@0.0.0.0:{}/mysql",
@@ -83,9 +86,11 @@ impl TestCase {
         }
     }
 
-    async fn collect_events(&mut self) -> Result<()> {
+    async fn write_data_and_collect_events(&mut self) -> Result<()> {
+        // Run preparation queries into database.
         for (_name, t) in self.tables.iter() {
             t.prepare.clone().ignore(&mut self.conn).await?;
+            info!("Run queries: {}", t.prepare);
         }
         sleep(Duration::from_secs(1)).await;
 
@@ -123,7 +128,7 @@ impl TestCase {
     }
 
     async fn check_inner(&mut self) -> Result<()> {
-        self.collect_events().await?;
+        self.write_data_and_collect_events().await?;
 
         for (table_data, events) in self.tables.iter().filter_map(|(key, table_data)| {
             self.table_events
@@ -145,7 +150,7 @@ impl TestCase {
     }
 
     async fn fix(&mut self) {
-        self.collect_events().await.unwrap();
+        self.write_data_and_collect_events().await.unwrap();
 
         let mut tables = serde_yaml::Mapping::new();
 
@@ -169,7 +174,6 @@ impl TestCase {
     }
 
     async fn teardown(&mut self) {
-        // Clean up, no matter success or failure.
         for (table_name, _) in self.tables.iter() {
             format!("DROP TABLE IF EXISTS {table_name}")
                 .ignore(&mut self.conn)
@@ -190,14 +194,14 @@ fn check_cdc_rows_eq(expected: &str, actual: &[String]) -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn test_single_table_cdc() {
-    let mut t = TestCase::new("./tests/testdata/single_table_cdc.yaml").await;
+    let mut t = TestSuite::load("./tests/testdata/single_table_cdc.yaml").await;
     t.check().await;
     t.teardown().await;
 }
 
 #[tokio::test]
 async fn fix_single_table_cdc() {
-    let mut t = TestCase::new("./tests/testdata/single_table_cdc.yaml").await;
+    let mut t = TestSuite::load("./tests/testdata/single_table_cdc.yaml").await;
     t.fix().await;
     t.teardown().await;
 }
